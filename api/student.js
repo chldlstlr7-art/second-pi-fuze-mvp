@@ -1,92 +1,92 @@
 // 1. Google Gemini 라이브러리 가져오기
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// 2. Vercel에 저장된 'GEMINI_API_KEY' 가져오기 (단일 키 방식)
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-    throw new Error("GEMINI_API_KEY 환경 변수가 설정되어야 합니다.");
+// 2. Vercel에 저장된 모든 Gemini API 키 가져오기
+const apiKeys = [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY2,
+].filter(key => key);
+
+if (apiKeys.length < 2) {
+    // 병렬 처리를 위해 최소 2개의 키가 필요함을 알립니다.
+    throw new Error("병렬 처리를 위해 GEMINI_API_KEY와 GEMINI_API_KEY2 환경 변수가 모두 설정되어야 합니다.");
 }
-const genAI = new GoogleGenerativeAI(apiKey);
+
+// 각 작업에 다른 API 키를 사용
+const genAI_1 = new GoogleGenerativeAI(apiKeys[0]);
+const genAI_2 = new GoogleGenerativeAI(apiKeys[1]);
 
 // 3. AI 모델 설정
-const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash", 
-});
+const model_1 = genAI_1.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model_2 = genAI_2.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 
-// --- 프롬프트 엔지니어링 (새로운 분석 구조) ---
+// --- 프롬프트 엔지니어링 (역할 분리) ---
 
-// [1단계] 자동 분류 및 통합 분석용 프롬프트
-const promptForStep1 = `
-You are an expert AI consultant. Your first task is to automatically classify the user's text into 'idea', 'essay', or 'reflection'.
-Then, based on that classification, immediately perform a detailed analysis using the corresponding criteria.
-Provide a single, consolidated report in JSON format, in Korean. Be extremely fast and concise.
-
-**Plagiarism Analysis Rules:**
-1.  **Context is Key:** Differentiate 'plagiarismSuspicion' (no attribution) from 'properCitation' (has quotes/source).
-2.  **Ignore Generic Formats:** Do NOT flag general writing structures as structural plagiarism. Focus on unique logical flows from specific, known concepts or works from your internal knowledge.
-3.  **Use Internal Knowledge:** For structural plagiarism, provide a well-known real-world example INSTEAD of searching for a live URL.
+// [작업 1] 창의성 분석 및 질문 생성용 프롬프트
+const promptForAnalysisAndQuestions = `
+You are an expert AI consultant. First, classify the user's text into 'idea', 'essay', or 'reflection'.
+Then, provide an originality analysis and probing questions based on that type.
+Be extremely fast and concise. Output JSON in Korean.
 
 **JSON OUTPUT RULES:**
-- Respond with a VALID JSON object. Do not include markdown \`\`\`json.
-- The 'textPlagiarismScore' should be an estimation based on the findings in 'plagiarismSuspicion'.
+- Respond with a VALID JSON object without any markdown wrappers.
 
 **JSON STRUCTURE:**
 {
-  "documentType": "<The category you identified: '아이디어/기획안', '논설문/에세이', or '소감문/리뷰'>",
+  "documentType": "<'아이디어/기획안', '논설문/에세이', or '소감문/리뷰'>",
   "logicalOriginalityScore": <Number 0-100 for structural/logical originality>,
-  "textPlagiarismScore": <Number 0-100 for textual plagiarism risk. High score = high risk.>,
-  "coreSummary": [
-    "<The 1st key logic step or key sentence of the text.>",
-    "<The 2nd key logic step or key sentence of the text.>",
-    "<The 3rd key logic step or key sentence of the text.>"
-  ],
-  "judgmentCriteria": [
-    "<Criterion 1 relevant to the doc type>",
-    "<Criterion 2 relevant to the doc type>",
-    "<Criterion 3 relevant to the doc type>"
-  ],
-  "plagiarismReport": {
-    "plagiarismSuspicion": [{ "similarSentence": "<...>", "source": "<...>", "similarityScore": <...> }],
-    "properCitation": [{ "citedSentence": "<...>", "source": "<...>" }],
-    "commonKnowledge": ["<list of common knowledge phrases found>"],
-    "structuralPlagiarism": [{ 
-      "sourceLogic": "<name of similar logic/model from your knowledge>", 
-      "pointOfSimilarity": "<explanation>",
-      "similarityLevel": "<One of: '매우 낮음', '낮음', '보통', '주의', '높음', '매우 높음'>"
-    }]
-  },
+  "coreSummary": ["<1st key logic/sentence>", "<2nd key logic/sentence>", "<3rd key logic/sentence>"],
+  "judgmentCriteria": ["<Criterion 1>", "<Criterion 2>", "<Criterion 3>"],
   "questions": ["<...>", "<...>", "<...>"]
 }
 `;
 
-// [2단계] 최종 융합 아이디어 생성용 프롬프트
-const promptForStep2 = `
-You are a creative strategist. Synthesize the [Original Idea] and [User's Answers] into a 'Fused Idea'.
-Your goal is to provide a concise analysis and concrete, actionable edit suggestions.
-Be extremely concise and fast, in Korean.
+// [작업 2] 표절 검사 전용 프롬프트
+const promptForPlagiarismReport = `
+You are a plagiarism detection specialist with web search capabilities.
+Analyze the user's text for direct and structural plagiarism.
+Be extremely fast and concise. Output JSON in Korean.
+
+**Plagiarism Analysis Rules:**
+1.  **Context is Key:** Differentiate 'plagiarismSuspicion' from 'properCitation'.
+2.  **Ignore Generic Formats:** Do NOT flag general writing structures as structural plagiarism.
+3.  **Verify URLs:** Use your search tool to provide valid, working URLs.
+4.  **Report High Similarity:** Report all 'plagiarismSuspicion' instances with a similarityScore >= 80%.
 
 **JSON OUTPUT RULES:**
-- YOU MUST RESPOND WITH A VALID JSON OBJECT. Do not include markdown \`\`\`json.
+- Respond with a VALID JSON object without any markdown wrappers.
 
 **JSON STRUCTURE:**
 {
-  "fusionTitle": "<A new, compelling name for the fused idea.>",
-  "analysis": {
-    "originalSummary": "<Summarize the core of the original idea in one or two sentences.>",
-    "keyChange": "<Explain the most critical change based on the user's answers in one or two sentences.>",
-    "conclusion": "<Describe the final fused idea's new value proposition in one or two sentences.>"
-  },
-  "suggestedEdits": [
-    {
-      "originalText": "<Select a specific, important paragraph from the user's [Original Idea] that needs improvement.>",
-      "suggestedRevision": "<Provide a rewritten, improved version of that paragraph/section, reflecting the fusion.>"
-    }
-  ]
+  "textPlagiarismScore": <Number 0-100 for textual plagiarism risk>,
+  "plagiarismReport": {
+    "plagiarismSuspicion": [{ "similarSentence": "<...>", "source": "<...>", "similarityScore": <...> }],
+    "properCitation": [{ "citedSentence": "<...>", "source": "<...>" }],
+    "commonKnowledge": ["<list of common knowledge phrases found>"],
+    "structuralPlagiarism": [{ "sourceLogic": "<...>", "pointOfSimilarity": "<...>", "similarityLevel": "<...>", "sourceLink": "<VALID URL>" }]
+  }
 }
 `;
 
-// 4. Vercel 서버리스 함수 (단일 API 호출)
+// [작업 3] 최종 융합 아이디어 생성용 프롬프트
+const promptForStep2 = `
+You are a creative strategist. Synthesize the [Original Idea] and [User's Answers] into a 'Fused Idea'.
+Provide a concise analysis and concrete, actionable edit suggestions.
+Be extremely fast and concise. Output JSON in Korean.
+
+**JSON OUTPUT RULES:**
+- Respond with a VALID JSON object without any markdown wrappers.
+
+**JSON STRUCTURE:**
+{
+  "fusionTitle": "<...>", "analysis": { "originalSummary": "<...>", "keyChange": "<...>", "conclusion": "<...>" },
+  "suggestedEdits": [{ "originalText": "<...>", "suggestedRevision": "<...>" }]
+}
+`;
+
+
+// Vercel 서버리스 함수 (병렬 처리 방식)
 module.exports = async (req, res) => {
     console.time("Total Request Time"); 
 
@@ -97,55 +97,54 @@ module.exports = async (req, res) => {
     try {
         const { stage, idea, originalIdea, answers } = req.body;
 
-        let prompt = "";
-        let userInput = "";
+        let finalResultJson;
         
         if (stage === 'analyze') {
             if (!idea) return res.status(400).json({ error: 'Missing idea.' });
-            prompt = promptForStep1;
-            userInput = `[User's Text]:\n${idea}`;
 
+            console.time("Parallel API Calls");
+
+            // 두 개의 작업을 동시에 시작
+            const analysisPromise = model_1.generateContent(`${promptForAnalysisAndQuestions}\n\n[User's Text]:\n${idea}`);
+            const plagiarismPromise = model_2.generateContent(`${promptForPlagiarismReport}\n\n[User's Text]:\n${idea}`);
+
+            // 두 작업이 모두 끝날 때까지 기다림
+            const [analysisResult, plagiarismResult] = await Promise.all([
+                analysisPromise,
+                plagiarismPromise
+            ]);
+
+            console.timeEnd("Parallel API Calls");
+
+            const analysisResponse = await analysisResult.response;
+            const plagiarismResponse = await plagiarismResult.response;
+
+            // 각 결과를 파싱
+            const analysisJson = JSON.parse(analysisResponse.text().replace(/```json|```/g, ''));
+            const plagiarismJson = JSON.parse(plagiarismResponse.text().replace(/```json|```/g, ''));
+            
+            // 두 결과를 하나의 객체로 병합
+            finalResultJson = {
+                ...analysisJson,
+                ...plagiarismJson
+            };
+            
         } else if (stage === 'fuse') {
             if (!originalIdea || !answers) return res.status(400).json({ error: 'Missing originalIdea or answers.' });
-            prompt = promptForStep2;
-            userInput = `[Original Idea]:\n${originalIdea}\n\n[User's Answers]:\n${answers.join('\n')}`;
+            
+            console.time("API Call: Fusion");
+            const fuseResult = await model_1.generateContent(`${promptForStep2}\n\n[Original Idea]:\n${originalIdea}\n\n[User's Answers]:\n${answers.join('\n')}`);
+            const fuseResponse = await fuseResult.response;
+            const fuseJsonText = fuseResponse.text().replace(/```json|```/g, '');
+            finalResultJson = JSON.parse(fuseJsonText);
+            console.timeEnd("API Call: Fusion");
         
         } else {
             return res.status(400).json({ error: 'Invalid stage provided.' });
         }
         
-        const fullPrompt = `${prompt}\n\n${userInput}`;
-        
-        console.time("Single API Call");
-        const result = await model.generateContent(fullPrompt);
-        console.timeEnd("Single API Call");
-        
-        const response = await result.response;
-        let analysisResultText = response.text();
-        
-        console.time("JSON Parsing");
-        let jsonTextToParse = analysisResultText;
-        const jsonMatch = jsonTextToParse.match(/```json\s*([\sS]*?)\s*```/);
-        if (jsonMatch && jsonMatch[1]) {
-            jsonTextToParse = jsonMatch[1];
-        } else {
-             const firstBrace = jsonTextToParse.indexOf('{');
-             const lastBrace = jsonTextToParse.lastIndexOf('}');
-             if (firstBrace !== -1 && lastBrace > firstBrace) {
-                  jsonTextToParse = jsonTextToParse.substring(firstBrace, lastBrace + 1);
-             }
-        }
-        
-        try {
-            const resultJson = JSON.parse(jsonTextToParse);
-            console.timeEnd("JSON Parsing");
-            console.timeEnd("Total Request Time");
-            res.status(200).json(resultJson);
-        } catch (e) {
-            console.error("JSON Parsing Error:", e.message);
-            console.error("Original AI Response:", jsonTextToParse); 
-            throw new Error(`AI가 유효하지 않은 JSON 형식으로 응답했습니다.`);
-        }
+        console.timeEnd("Total Request Time");
+        res.status(200).json(finalResultJson);
 
     } catch (error) {
         console.error('AI 분석 중 오류:', error);
