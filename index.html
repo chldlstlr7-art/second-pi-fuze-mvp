@@ -8,6 +8,7 @@
         :root {
             --primary-color: #3B82F6; /* A richer, more modern blue */
             --secondary-color: #10B981; /* A vibrant green for success/positive elements */
+            --warning-color: #F59E0B; /* Amber for similarity points */
             --bg-color: #F8FAFC; /* A slightly cooler background */
             --card-bg: #FFFFFF;
             --text-dark: #1F2937;
@@ -67,12 +68,24 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         
         /* Analysis Stage Styles */
-        .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 30px; }
+        h3 { font-size: 1.4em; color: var(--text-dark); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); }
+        .analysis-section { margin-bottom: 30px; }
+        .criteria-list { list-style: none; padding-left: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+        .criteria-list li { background-color: #EFF6FF; color: var(--primary-color); padding: 8px 15px; border-radius: 20px; font-size: 0.9em; font-weight: 500; }
+        
+        .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 20px; }
         .gauge-container { text-align: center; }
-        .gauge-container h3 { margin-bottom: 15px; font-size: 1.2em; }
-        .comparison-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+        
         .comparison-card { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
-        .comparison-card h4 { margin-top: 0; color: var(--primary-color); font-size: 1.1em;}
+        .comparison-card h4 { margin-top: 0; color: var(--primary-color); font-size: 1.2em;}
+        
+        .comparison-point { margin-top: 20px; padding: 20px; border-radius: 8px; }
+        .comparison-point.similar { background-color: #FFFBEB; border-left: 5px solid var(--warning-color); }
+        .comparison-point.different { background-color: #ECFDF5; border-left: 5px solid var(--secondary-color); }
+        .comparison-point h4 { display: flex; align-items: center; gap: 10px; margin-top: 0; font-size: 1.1em; }
+        .comparison-point.similar h4 { color: #D97706; }
+        .comparison-point.different h4 { color: #059669; }
+
         .nav-button-container { text-align: center; margin-top: 20px; }
         #btn-show-questions { width: auto; padding: 12px 30px; display: inline-block; background: var(--secondary-color) }
 
@@ -95,9 +108,11 @@
         .feedback-btn:hover { background-color: #f0f0f0; transform: scale(1.1); }
         .feedback-btn.selected { background-color: var(--secondary-color); border-color: var(--secondary-color); color: white; }
 
+        .btn-secondary { background: var(--bg-color); color: var(--text-dark); border: 1px solid var(--border-color); margin-top: 10px !important; }
+        .btn-secondary:hover { background: #F3F4F6; box-shadow: none; transform: none; }
+
         @media (min-width: 768px) {
-            .analysis-grid { grid-template-columns: 1fr 1fr; align-items: center; }
-            .comparison-grid { grid-template-columns: 1fr 1fr; }
+            .analysis-grid { grid-template-columns: 220px 1fr; align-items: flex-start; }
         }
     </style>
 </head>
@@ -121,6 +136,7 @@
             <p>분석하고 싶은 아이디어나 리포트 초안의 핵심 내용을 입력해주세요.</p>
             <textarea id="idea-input" placeholder="여기에 아이디어를 입력하세요..."></textarea>
             <button id="btn-start-analysis">분석 시작</button>
+            <button id="btn-show-example" class="btn-secondary">예시 결과 보기</button>
         </div>
 
         <!-- Loading Spinner -->
@@ -129,30 +145,47 @@
         <!-- STAGE 2: Analysis Report -->
         <div id="stage-analysis" class="card hidden">
             <h2>1. 독창성 진단 리포트</h2>
+            
+            <div class="analysis-section">
+                <h3>종합 평가</h3>
+                <p id="overall-assessment"></p>
+            </div>
+            
             <div class="analysis-grid">
                 <div class="gauge-container">
-                    <h3>표절 위험도</h3>
+                    <h3>구조적 독창성</h3>
                     <svg width="200" height="120" viewBox="0 0 200 120">
-                        <defs><linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#50E3C2"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#D0021B"/></linearGradient></defs><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" /><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#gaugeGradient)" stroke-width="20" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" id="gauge-arc"/><text x="100" y="95" text-anchor="middle" font-size="24" font-weight="bold" fill="#333" id="gauge-text">0%</text><line x1="100" y1="100" x2="100" y2="20" stroke="#333" stroke-width="4" id="gauge-needle" transform="rotate(-90 100 100)" style="transform-origin: center; transition: transform 0.5s ease-in-out;" />
+                        <defs><linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#D0021B"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#50E3C2"/></linearGradient></defs><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" /><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#gaugeGradient)" stroke-width="20" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" id="gauge-arc"/><text x="100" y="95" text-anchor="middle" font-size="24" font-weight="bold" fill="#333" id="gauge-text">0%</text><line x1="100" y1="100" x2="100" y2="20" stroke="#333" stroke-width="4" id="gauge-needle" transform="rotate(-90 100 100)" style="transform-origin: center; transition: transform 0.5s ease-in-out;" />
                     </svg>
-                    <p id="plagiarism-reason" style="font-weight: bold;"></p>
                 </div>
-                <div class="archetype-container">
-                    <h3>구조적 복제 분석</h3>
-                    <p>입력된 아이디어는 <strong id="archetype-name" style="color: var(--primary-color);"></strong> 원형과 유사한 구조를 가집니다.</p>
-                    <p id="archetype-desc"></p>
-                    <div class="comparison-grid">
-                        <div class="comparison-card">
-                            <h4>일반적인 사례</h4>
-                            <p id="archetype-comparison"></p>
-                        </div>
-                        <div class="comparison-card">
-                            <h4>나의 아이디어</h4>
-                            <p>위 사례의 논리 구조를 따라 아이디어를 전개하고 있습니다.</p>
-                        </div>
-                    </div>
+                <div class="criteria-container">
+                    <h3>판단 기준</h3>
+                    <ul id="criteria-list" class="criteria-list"></ul>
                 </div>
             </div>
+
+            <div class="analysis-section">
+                <h3>유사 사례 심층 분석</h3>
+                <div class="comparison-card">
+                    <h4>유사사례: <span id="comparison-name" style="font-weight:bold;"></span></h4>
+                    <p id="comparison-desc"></p>
+                </div>
+                <div class="comparison-point similar">
+                    <h4>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+                        구조적 유사점
+                    </h4>
+                    <p id="points-similarity"></p>
+                </div>
+                <div class="comparison-point different">
+                    <h4>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
+                        차별점 및 독창성
+                    </h4>
+                    <p id="points-difference"></p>
+                </div>
+            </div>
+            
             <div class="nav-button-container">
                 <button id="btn-show-questions">다음 (질문 답변)</button>
             </div>
@@ -225,6 +258,7 @@ const btnCopyResult = document.getElementById('btn-copy-result');
 const btnFeedbackYes = document.getElementById('btn-feedback-yes');
 const btnFeedbackNo = document.getElementById('btn-feedback-no');
 const feedbackMessage = document.getElementById('feedback-message');
+const btnShowExample = document.getElementById('btn-show-example');
 
 // --- Event Listeners ---
 btnStartAnalysis.addEventListener('click', handleAnalysisRequest);
@@ -234,6 +268,7 @@ btnRestart.addEventListener('click', () => location.reload());
 btnCopyResult.addEventListener('click', handleCopyResult);
 btnFeedbackYes.addEventListener('click', () => handleFeedback(true));
 btnFeedbackNo.addEventListener('click', () => handleFeedback(false));
+btnShowExample.addEventListener('click', handleShowExample);
 
 // --- Stage Control ---
 function showStage(stageName) {
@@ -298,17 +333,34 @@ async function handleAnalysisRequest() {
 }
 
 function renderAnalysisReport(data) {
-    const { plagiarismScore, plagiarismReason, archetype } = data;
+    const { originalityScore, overallAssessment, judgmentCriteria, comparisonAnalysis } = data;
+    
+    // Render Gauge
     const gaugeNeedle = document.getElementById('gauge-needle');
     const gaugeText = document.getElementById('gauge-text');
-    const angle = -90 + (plagiarismScore / 100) * 180;
+    const angle = -90 + (originalityScore / 100) * 180;
     gaugeNeedle.setAttribute('transform', `rotate(${angle} 100 100)`);
-    gaugeText.textContent = `${plagiarismScore}%`;
-    document.getElementById('plagiarism-reason').textContent = plagiarismReason;
-    document.getElementById('archetype-name').textContent = archetype.name;
-    document.getElementById('archetype-desc').textContent = archetype.description;
-    document.getElementById('archetype-comparison').textContent = archetype.comparison;
+    gaugeText.textContent = `${originalityScore}%`;
+
+    // Render Texts
+    document.getElementById('overall-assessment').textContent = overallAssessment;
+    
+    // Render Criteria
+    const criteriaList = document.getElementById('criteria-list');
+    criteriaList.innerHTML = '';
+    judgmentCriteria.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        criteriaList.appendChild(li);
+    });
+
+    // Render Comparison
+    document.getElementById('comparison-name').textContent = comparisonAnalysis.existingExampleName;
+    document.getElementById('comparison-desc').textContent = comparisonAnalysis.existingExampleDesc;
+    document.getElementById('points-similarity').textContent = comparisonAnalysis.pointsOfSimilarity;
+    document.getElementById('points-difference').textContent = comparisonAnalysis.pointsOfDifference;
 }
+
 
 // --- Step 2: Questions ---
 function renderQuestionInputs(questions) {
@@ -383,6 +435,23 @@ function handleFeedback(isHelpful) {
         btnFeedbackNo.classList.add('selected');
     }
 }
+
+// --- Example Result Function ---
+function handleShowExample() {
+    const exampleData = {
+        fusionTitle: "드림스케이프(DreamScape): AI 기반 꿈 분석을 통한 개인 맞춤형 멘탈 케어 솔루션",
+        fusionSummary: "드림스케이프는 사용자가 기록한 꿈의 서사와 상징을 AI로 분석하여 무의식적인 심리 상태에 대한 통찰을 제공하는 멘탈 케어 솔루션입니다. 단순한 꿈 해몽을 넘어, 저명한 심리학 이론(예: 융의 분석심리학)을 기반으로 꿈의 패턴과 현실의 감정 변화 사이의 연관성을 시각화하여 보여줍니다. 이를 통해 사용자는 스스로를 더 깊이 이해하고, 스트레스나 불안의 근본적인 원인을 탐색하는 새로운 경로를 발견할 수 있습니다.",
+        connection: "초기 아이디어는 'AI 기반 꿈 일기'였습니다. 그러나 '단순 데이터 기록 및 분석'이라는 구조는 이미 '무드 트래커'나 '헬스케어 앱'에서 널리 사용되는 구조라는 피드백을 반영했습니다. 따라서 사용자의 답변을 통해 '전문 심리학 이론 접목'과 '현실 감정과의 연관성 시각화'라는 요소를 융합하여, 단순 분석을 넘어 구체적인 '멘탈 케어 솔루션'으로 아이디어를 발전시켰습니다. 이는 기존 앱들과의 구조적 유사성을 극복하고 명확한 차별점을 확보하는 핵심적인 진화입니다.",
+        keyFeatures: [
+            "상징 분석 엔진: 사용자가 입력한 꿈의 텍스트와 이미지를 분석하여 핵심 상징을 추출하고, 융의 분석심리학 이론에 기반한 다각적인 해석을 제공합니다.",
+            "감정-꿈 연관성 대시보드: 사용자가 기록한 현실의 감정 상태와 꿈의 내용을 교차 분석하여, 특정 감정이 어떤 꿈의 패턴으로 나타나는지 시각적인 그래프와 리포트로 보여줍니다.",
+            "개인화된 자아 탐색 퀘스트: 분석 결과를 바탕으로 '나의 불안과 마주하기', '내 안의 창의성 발견하기' 등 개인 맞춤형 성찰 질문과 활동(퀘스트)을 제안하여 지속적인 멘탈 케어를 돕습니다."
+        ]
+    };
+    renderFusionReport(exampleData);
+    showStage('fusion');
+}
+
 
 // --- Initial Load ---
 showStage('input');
