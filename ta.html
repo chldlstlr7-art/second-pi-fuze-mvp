@@ -157,7 +157,7 @@
         .report-output ul li { margin-bottom: 10px; }
         .report-output strong { color: var(--primary-color); }
         
-        /* --- (신규) 종합 점수 스타일 --- */
+        /* 종합 점수 스타일 (변경 없음) */
         .eval-container {
             display: flex;
             gap: 25px;
@@ -428,7 +428,7 @@
     btnStart.addEventListener('click', handleAssessmentRequest);
     btnRestart.addEventListener('click', () => location.reload());
 
-    // --- (수정) 다중 파일 병렬 분석 요청 핸들러 ---
+    // --- 다중 파일 병렬 분석 요청 핸들러 ---
     async function handleAssessmentRequest() {
         const validFiles = filesToAnalyze.filter(f => !f.error && f.text);
         
@@ -444,10 +444,8 @@
         btnStart.disabled = true;
 
         for (const file of validFiles) {
-            // 1. 각 파일의 고유 ID 생성
             const fileId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
             
-            // 2. 즉시 플레이스홀더(로딩 카드) 생성 (수정: 평가 섹션 제목 변경)
             const placeholderHtml = `
                 <div id="${fileId}" class="card">
                     <h2>${escapeHTML(file.name)}</h2>
@@ -464,8 +462,6 @@
             `;
             resultStage.insertAdjacentHTML('beforeend', placeholderHtml);
 
-            // 3. 비동기(await 없음)로 3개 API 동시 호출 및 개별 업데이트
-            
             // 요약 (api/ta-summary.js)
             callApiEndpoint('/api/ta-summary', { stage: 'summarize', reportText: file.text })
                 .then(data => {
@@ -495,7 +491,7 @@
         }
     }
 
-    // --- (신규) HTML 렌더링 헬퍼 함수 ---
+    // --- HTML 렌더링 헬퍼 함수 ---
 
     function renderSummaryHtml(data) {
         return `
@@ -506,11 +502,10 @@
         `;
     }
 
-    // --- (수정) 점수/평가 렌더링 함수 ---
+    // --- (수정) 점수/평가 렌더링 함수 (오류 수정) ---
     function renderEvaluationHtml(data) {
         const { overallScore, originalityDraft } = data;
 
-        // 점수에 따라 색상 변경 (옵션)
         let scoreColor = 'var(--primary-color)';
         if (overallScore < 70) scoreColor = '#F59E0B'; // Amber
         if (overallScore < 50) scoreColor = '#EF4444'; // Red
@@ -520,7 +515,7 @@
                 <h3>종합 점수 및 평가</h3>
                 <div class="eval-container">
                     <div class="score-circle" style="background-color: ${scoreColor};">
-                        <span>${escapeHTML(overallScore)}</span>
+                        <span>${overallScore}</span>
                         <small>점</small>
                     </div>
                     <div class="eval-draft">
@@ -557,8 +552,8 @@
                 `;
             }).join('');
         } else {
-            // (수정) '느슨한 기준'으로 문구 변경
-            similarListHtml = '<li style="list-style-type: none; color: #6B7280;">느슨한 기준(유사 의역, 표준 정의 등)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
+            // (수정) '엄격한 기준'으로 문구 변경
+            similarListHtml = '<li style="list-style-type: none; color: #6B7280;">엄격한 기준(직접 인용, 최소 변경)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
         }
 
         return `
