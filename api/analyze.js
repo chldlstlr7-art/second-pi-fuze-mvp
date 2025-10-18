@@ -4,65 +4,71 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // 2. Vercel에 저장된 'GEMINI_API_KEY' 가져오기
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// 3. AI 모델 설정 (사용자가 요청한 2.5 버전으로 수정)
+// 3. AI 모델 설정 (사용자가 찾아낸 모델)
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash", 
 });
 
-// --- 프롬프트 엔지니어링 (JSON 출력 강화) ---
-// [1단계] 분석 및 질문 생성용 프롬프트
+
+// --- 프롬프트 엔지니어링 ---
+
+// [1단계] 최초 아이디어 분석 및 질문 생성용 프롬프트
 const promptForStep1 = `
-You are an expert AI analyst for PI-Fuze. Your task is to analyze a user's idea and return a response ONLY in a valid JSON format. Do not include any text, explanations, or markdown fences like \`\`\`json before or after the JSON object. Just the raw JSON.
+You are an expert AI consultant specializing in innovation and intellectual property analysis.
+Your task is to analyze a user's idea and provide a structured, balanced report in JSON format.
+You must not label everything as plagiarism. Instead, perform a nuanced analysis by finding a real-world parallel and highlighting both similarities and creative differences.
 
-The user's idea is:
----
-{{IDEA}}
----
+**Analysis Criteria:**
+When analyzing, consider these three core criteria:
+1.  **Originality of Problem Definition:** How unique is the core problem the user is trying to solve?
+2.  **Novelty of Solution Approach:** Is the method or technology used to solve the problem new or applied in a new way?
+3.  **Differentiation of Value Proposition:** How distinct is the benefit offered to the target audience compared to existing solutions?
 
-Analyze this idea and generate a JSON object with the following structure:
+**JSON Output Structure:**
+Based on your analysis, you MUST generate a JSON object with the following exact structure. Do not include any text, markdown formatting, or explanations outside of the JSON object.
+
+\`\`\`json
 {
-  "plagiarismScore": <A number between 0 and 100 representing the risk of structural plagiarism. Higher means more common.>,
-  "plagiarismReason": "<A brief, one-sentence explanation for the score. e.g., '매우 보편적인 시장 진입 전략입니다.'>",
+  "plagiarismScore": <A number between 0 and 100 representing the risk of structural plagiarism. High score means high similarity to existing ideas.>,
+  "plagiarismReason": "<A brief, one-sentence explanation for the score. Example: 'The core concept of a niche marketplace is well-established, but the target audience provides some differentiation.'>",
   "archetype": {
-    "name": "<The name of the closest idea archetype. e.g., '소셜 네트워크 기반 마켓플레이스'>",
-    "description": "<A one-sentence description of this archetype.>",
-    "comparison": "<A common, real-world example of this archetype. e.g., '당근마켓, 중고나라와 같이 사용자를 먼저 모으고 거래 기능을 붙이는 방식'>"
+    "name": "<A short, descriptive name for the structural pattern of the idea. Example: 'Vertical E-commerce Platform'>",
+    "description": "<A one-sentence description of this archetype. Example: 'This is a specialized online platform that focuses on transactions and exhibitions for a specific category of goods.'>",
+    "comparison": "<A well-known, real-world example that fits this archetype. Example: 'Just as Etsy specializes in handmade goods or KREAM specializes in limited-edition sneakers, this idea creates a dedicated space for a specific artistic field.'>"
   },
   "questions": [
-    "<A thought-provoking question to challenge the user's core assumption.>",
-    "<A second question to inspire a creative fusion with another field.>",
-    "<A third question to make the user think about a niche target audience.>"
+    "<A probing question that challenges the user's core assumptions based on the analysis.>",
+    "<A second question that encourages the user to think about expanding the idea's scope or interactivity.>",
+    "<A third question that pushes the user to consider a more specific niche market or application.>"
   ]
 }
+\`\`\`
 `;
 
-// [2단계] 최종 융합 아이디어 생성용 프롬프트
+
+// [2단계] 답변을 받아 최종 융합 아이디어 생성용 프롬프트
 const promptForStep2 = `
-You are an expert creative strategist for PI-Fuze. Your task is to synthesize a final, fused idea based on the user's original idea and their answers to your questions. Return a response ONLY in a valid JSON format. Do not include any text, explanations, or markdown fences like \`\`\`json before or after the JSON object. Just the raw JSON.
+You are a master creative strategist.
+You have been given a user's [Original Idea] and their [User's Answers] to questions designed to expand that idea.
 
-The user's original idea was:
----
-{{ORIGINAL_IDEA}}
----
+Your mission is to synthesize this information into a single, concrete, and innovative 'Fused Idea'.
+You MUST actively incorporate the user's answers to evolve the original concept.
 
-The user's answers to the provocative questions are:
----
-1. {{ANSWER_1}}
-2. {{ANSWER_2}}
-3. {{ANSWER_3}}
----
+**JSON Output Structure:**
+Generate a JSON object with the following exact structure. Do not include any text, markdown formatting, or explanations outside of the JSON object.
 
-Synthesize this information and generate a JSON object with the following structure:
+\`\`\`json
 {
-  "fusionTitle": "<A catchy, new name for the fused idea.>",
-  "fusionSummary": "<A compelling one-paragraph summary of the new idea.>",
-  "connection": "<A brief explanation of how the user's answers were specifically used to evolve the original idea into this new concept.>",
+  "fusionTitle": "<A compelling, new name for the fused idea.>",
+  "fusionSummary": "<A concise, one-paragraph summary of the final fused idea, explaining what it is.>",
+  "connection": "<Explain how the user's answers transformed the original idea into this new concept. Reference specific answers. Example: 'The user's answer to the first question shifted the focus from a simple marketplace to an educational platform...'>",
   "keyFeatures": [
-    "<The first key feature of the new idea.>",
-    "<The second key feature, directly reflecting the fusion.>",
-    "<The third key feature, highlighting its uniqueness.>"
+    "<A description of the first key feature of the fused idea.>",
+    "<A description of the second key feature.>",
+    "<A description of the third key feature.>"
   ]
 }
+\`\`\`
 `;
 
 // 4. Vercel 서버리스 함수 (핵심 로직)
@@ -73,39 +79,49 @@ module.exports = async (req, res) => {
 
     try {
         const { stage, idea, originalIdea, answers } = req.body;
-        let finalPrompt = "";
 
+        let prompt = "";
+        let userInput = "";
+        
         if (stage === 'analyze') {
-            finalPrompt = promptForStep1.replace('{{IDEA}}', idea);
+            prompt = promptForStep1;
+            userInput = `Here is the user's idea:\n${idea}`;
         } else if (stage === 'fuse') {
-            finalPrompt = promptForStep2
-                .replace('{{ORIGINAL_IDEA}}', originalIdea)
-                .replace('{{ANSWER_1}}', answers[0])
-                .replace('{{ANSWER_2}}', answers[1])
-                .replace('{{ANSWER_3}}', answers[2]);
+            prompt = promptForStep2;
+            userInput = `[Original Idea]:\n${originalIdea}\n\n[User's Answers]:\n${answers.join('\n')}`;
         } else {
             return res.status(400).json({ error: 'Invalid stage provided.' });
         }
-
-        const result = await model.generateContent(finalPrompt);
-        const responseText = result.response.text();
         
-        // ★★★★★ 수정된 핵심 부분 ★★★★★
-        // AI 응답에서 Markdown 코드 블록을 제거하는 로직
+        const fullPrompt = `${prompt}\n\n${userInput}`;
+        
+        const result = await model.generateContent(fullPrompt);
+        const response = await result.response;
+        let analysisResultText = response.text();
+
+        // --- Robust JSON Parsing ---
+        // AI might sometimes include ```json ... ``` markdown. We need to extract the raw JSON.
+        const jsonMatch = analysisResultText.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch && jsonMatch[1]) {
+            analysisResultText = jsonMatch[1];
+        }
+
         try {
-            // 정규표현식을 사용해 ```json 과 ``` 를 제거
-            const cleanedText = responseText.replace(/```json\s*|```/g, '').trim();
-            const jsonResponse = JSON.parse(cleanedText);
-            res.status(200).json(jsonResponse);
+            const analysisResultJson = JSON.parse(analysisResultText);
+            res.status(200).json(analysisResultJson);
         } catch (e) {
             console.error("JSON Parsing Error:", e);
-            console.error("Original AI Response:", responseText); // 원본 응답도 로그로 남김
-            res.status(500).json({ error: "AI가 유효한 형식의 응답을 생성하지 못했습니다." });
+            console.error("Original AI Response:", analysisResultText);
+            throw new Error(`AI가 유효하지 않은 JSON 형식으로 응답했습니다.`);
         }
 
     } catch (error) {
         console.error('AI 분석 중 오류:', error);
-        res.status(500).json({ error: 'AI 모델을 호출하는 데 실패했습니다.' });
+        let errorMessage = 'AI 모델을 호출하는 데 실패했습니다.';
+        if (error.message) {
+            errorMessage = error.message;
+        }
+        res.status(500).json({ error: errorMessage });
     }
 };
 
