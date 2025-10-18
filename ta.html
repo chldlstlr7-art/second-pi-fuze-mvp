@@ -113,7 +113,7 @@
              color: var(--primary-color);
         }
 
-        /* --- START: SIMILARITY CARD STYLES (수정됨) --- */
+        /* --- START: SIMILARITY CARD STYLES --- */
         #result-similar-phrases {
             list-style-type: none; /* 기본 리스트 스타일 제거 */
             padding-left: 0;
@@ -312,7 +312,7 @@
                 let urlHTML = '';
                 if (item.sourceURL && item.sourceURL.startsWith('http')) {
                     // 유효한 URL이면 링크 생성
-                    urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank">${item.sourceURL}</a>`;
+                    urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank" rel="noopener noreferrer">${item.sourceURL}</a>`;
                 } else if (item.sourceURL && item.sourceURL !== 'N/A') {
                     // URL은 아니지만 'N/A'도 아닌 텍스트 정보
                     urlHTML = `<br><strong>추정 URL:</strong> ${item.sourceURL}`;
@@ -321,21 +321,38 @@
 
                 // HTML 구조로 상세 정보 삽입
                 li.innerHTML = `
-                    <p class="suspicious-phrase">"${item.phrase}"</p>
+                    <p class="suspicious-phrase">"${escapeHTML(item.phrase)}"</p>
                     <div class="suspicious-details">
-                        <strong>유사 출처 (추정):</strong> ${item.likelySource}
+                        <strong>유사 출처 (추정):</strong> ${escapeHTML(item.likelySource)}
                         ${urlHTML} 
-                        <br><strong>유사성 유형:</strong> ${item.similarityType}
+                        <br><strong>유사성 유형:</strong> ${escapeHTML(item.similarityType)}
                     </div>
                 `;
                 similarList.appendChild(li);
             });
         } else {
             // 유사 문구가 없을 경우
-            similarList.innerHTML = '<li style="list-style-type: none; color: #6B7280;">특별히 감지된 표면적 유사 문구가 없습니다.</li>';
+            similarList.innerHTML = '<li style="list-style-type: none; color: #6B7280;">엄격한 기준(직접 인용, 최소 변경)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
         }
         // --- (수정 완료) ---
     }
+    
+    /**
+     * XSS(Cross-Site Scripting) 방지를 위한 간단한 HTML 이스케이프 함수
+     */
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, function(match) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[match];
+        });
+    }
+
 </script>
 </body>
 </html>
