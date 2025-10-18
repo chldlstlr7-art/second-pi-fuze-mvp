@@ -15,6 +15,7 @@
             --text-light: #6B7280;
             --border-color: #E5E7EB;
         }
+        html { scroll-behavior: smooth; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
             background-color: var(--bg-color);
@@ -48,10 +49,17 @@
             margin-bottom: 20px; 
             box-shadow: 0 8px 32px rgba(0, 30, 80, 0.08); 
             border: 1px solid var(--border-color);
-            animation: fadeIn 0.5s ease-in-out;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .card.finalized {
+            opacity: 0.7;
+            background-color: #F9FAFB;
         }
         .hidden { display: none !important; }
 
+        .fade-in {
+            animation: fadeIn 0.6s ease-in-out;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -108,9 +116,6 @@
         .feedback-btn:hover { background-color: #f0f0f0; transform: scale(1.1); }
         .feedback-btn.selected { background-color: var(--secondary-color); border-color: var(--secondary-color); color: white; }
 
-        .btn-secondary { background: var(--bg-color); color: var(--text-dark); border: 1px solid var(--border-color); margin-top: 10px !important; }
-        .btn-secondary:hover { background: #F3F4F6; box-shadow: none; transform: none; }
-
         @media (min-width: 768px) {
             .analysis-grid { grid-template-columns: 220px 1fr; align-items: flex-start; }
         }
@@ -136,12 +141,10 @@
             <p>분석하고 싶은 아이디어나 리포트 초안의 핵심 내용을 입력해주세요.</p>
             <textarea id="idea-input" placeholder="여기에 아이디어를 입력하세요..."></textarea>
             <button id="btn-start-analysis">분석 시작</button>
-            <button id="btn-show-example" class="btn-secondary">예시 결과 보기</button>
         </div>
 
-        <!-- Loading Spinner -->
-        <div id="loading-spinner" class="spinner hidden"></div>
-
+        <!-- The following stages will be revealed as the user progresses -->
+        
         <!-- STAGE 2: Analysis Report -->
         <div id="stage-analysis" class="card hidden">
             <h2>1. 독창성 진단 리포트</h2>
@@ -187,7 +190,7 @@
             </div>
             
             <div class="nav-button-container">
-                <button id="btn-show-questions">다음 (질문 답변)</button>
+                <button id="btn-show-questions">질문에 답변하기</button>
             </div>
         </div>
 
@@ -227,6 +230,9 @@
 
             <button id="btn-restart">새로운 아이디어 분석하기</button>
         </div>
+        
+        <!-- Loading Spinner (moves to the bottom) -->
+        <div id="loading-spinner" class="spinner hidden"></div>
     </div>
 
 <script>
@@ -258,29 +264,19 @@ const btnCopyResult = document.getElementById('btn-copy-result');
 const btnFeedbackYes = document.getElementById('btn-feedback-yes');
 const btnFeedbackNo = document.getElementById('btn-feedback-no');
 const feedbackMessage = document.getElementById('feedback-message');
-const btnShowExample = document.getElementById('btn-show-example');
 
 // --- Event Listeners ---
 btnStartAnalysis.addEventListener('click', handleAnalysisRequest);
-btnShowQuestions.addEventListener('click', () => showStage('questions'));
+btnShowQuestions.addEventListener('click', () => revealStage('questions'));
 btnSubmitAnswers.addEventListener('click', handleFusionRequest);
 btnRestart.addEventListener('click', () => location.reload());
 btnCopyResult.addEventListener('click', handleCopyResult);
 btnFeedbackYes.addEventListener('click', () => handleFeedback(true));
 btnFeedbackNo.addEventListener('click', () => handleFeedback(false));
-btnShowExample.addEventListener('click', handleShowExample);
 
-// --- Stage Control ---
-function showStage(stageName) {
-    Object.values(stages).forEach(stage => stage.classList.add('hidden'));
-    if (stages[stageName]) {
-        stages[stageName].classList.remove('hidden');
-    }
-    spinner.classList.add('hidden');
-
-    // Update progress bar
+// --- UI Control ---
+function updateProgressBar(stageName) {
     Object.values(steps).forEach(step => step.classList.remove('active'));
-
     if (stageName === 'input' || stageName === 'analysis') {
         steps[1].classList.add('active');
     } else if (stageName === 'questions') {
@@ -291,29 +287,60 @@ function showStage(stageName) {
     }
 }
 
+function revealStage(stageName) {
+    const stageElement = stages[stageName];
+    if (stageElement) {
+        stageElement.classList.remove('hidden');
+        stageElement.classList.add('fade-in');
+        // Scroll to the new stage
+        stageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    updateProgressBar(stageName);
+}
+
+function finalizeStage(stageName) {
+    const stageElement = stages[stageName];
+    if (stageElement) {
+        stageElement.classList.add('finalized');
+        // Disable all buttons and textareas within this stage
+        const interactiveElements = stageElement.querySelectorAll('button, textarea');
+        interactiveElements.forEach(el => el.disabled = true);
+    }
+}
+
+
 // --- API Call Logic ---
 async function callApi(body) {
     spinner.classList.remove('hidden');
-    Object.values(stages).forEach(stage => stage.classList.add('hidden'));
-    [btnStartAnalysis, btnSubmitAnswers].forEach(btn => btn.disabled = true);
+    spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
 
     try {
         const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
-            const errData = await response.json();
+            const errData = await response.json().catch(() => ({ error: "An unknown server error occurred." }));
             throw new Error(errData.error || `서버 오류: ${response.statusText}`);
         }
         return await response.json();
     } catch (error) {
-        alert(`오류가 발생했습니다: ${error.message}`);
+        if (error.name === 'AbortError') {
+             alert('오류: AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요. (Timeout)');
+        } else {
+             alert(`오류가 발생했습니다: ${error.message}`);
+        }
         location.reload();
     } finally {
         spinner.classList.add('hidden');
-        [btnStartAnalysis, btnSubmitAnswers].forEach(btn => btn.disabled = false);
     }
 }
 
@@ -324,11 +351,12 @@ async function handleAnalysisRequest() {
         alert('아이디어를 입력해주세요.');
         return;
     }
+    finalizeStage('input');
     const data = await callApi({ stage: 'analyze', idea: originalIdea });
     if (data) {
         renderAnalysisReport(data);
         renderQuestionInputs(data.questions);
-        showStage('analysis');
+        revealStage('analysis');
     }
 }
 
@@ -382,10 +410,12 @@ async function handleFusionRequest() {
         alert('모든 질문에 답변해주세요.');
         return;
     }
+    finalizeStage('analysis');
+    finalizeStage('questions');
     const data = await callApi({ stage: 'fuse', originalIdea: originalIdea, answers: userAnswers });
     if (data) {
         renderFusionReport(data);
-        showStage('fusion');
+        revealStage('fusion');
     }
 }
 
@@ -407,7 +437,7 @@ function renderFusionReport(data) {
     fusionResultForCopy = `## 융합 아이디어: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${keyFeatures.map(f => `- ${f}`).join('\n')}`;
 }
 
-// --- New Feature Functions ---
+// --- Utility Functions ---
 function handleCopyResult() {
     navigator.clipboard.writeText(fusionResultForCopy).then(() => {
         const originalText = btnCopyResult.textContent;
@@ -436,25 +466,9 @@ function handleFeedback(isHelpful) {
     }
 }
 
-// --- Example Result Function ---
-function handleShowExample() {
-    const exampleData = {
-        fusionTitle: "드림스케이프(DreamScape): AI 기반 꿈 분석을 통한 개인 맞춤형 멘탈 케어 솔루션",
-        fusionSummary: "드림스케이프는 사용자가 기록한 꿈의 서사와 상징을 AI로 분석하여 무의식적인 심리 상태에 대한 통찰을 제공하는 멘탈 케어 솔루션입니다. 단순한 꿈 해몽을 넘어, 저명한 심리학 이론(예: 융의 분석심리학)을 기반으로 꿈의 패턴과 현실의 감정 변화 사이의 연관성을 시각화하여 보여줍니다. 이를 통해 사용자는 스스로를 더 깊이 이해하고, 스트레스나 불안의 근본적인 원인을 탐색하는 새로운 경로를 발견할 수 있습니다.",
-        connection: "초기 아이디어는 'AI 기반 꿈 일기'였습니다. 그러나 '단순 데이터 기록 및 분석'이라는 구조는 이미 '무드 트래커'나 '헬스케어 앱'에서 널리 사용되는 구조라는 피드백을 반영했습니다. 따라서 사용자의 답변을 통해 '전문 심리학 이론 접목'과 '현실 감정과의 연관성 시각화'라는 요소를 융합하여, 단순 분석을 넘어 구체적인 '멘탈 케어 솔루션'으로 아이디어를 발전시켰습니다. 이는 기존 앱들과의 구조적 유사성을 극복하고 명확한 차별점을 확보하는 핵심적인 진화입니다.",
-        keyFeatures: [
-            "상징 분석 엔진: 사용자가 입력한 꿈의 텍스트와 이미지를 분석하여 핵심 상징을 추출하고, 융의 분석심리학 이론에 기반한 다각적인 해석을 제공합니다.",
-            "감정-꿈 연관성 대시보드: 사용자가 기록한 현실의 감정 상태와 꿈의 내용을 교차 분석하여, 특정 감정이 어떤 꿈의 패턴으로 나타나는지 시각적인 그래프와 리포트로 보여줍니다.",
-            "개인화된 자아 탐색 퀘스트: 분석 결과를 바탕으로 '나의 불안과 마주하기', '내 안의 창의성 발견하기' 등 개인 맞춤형 성찰 질문과 활동(퀘스트)을 제안하여 지속적인 멘탈 케어를 돕습니다."
-        ]
-    };
-    renderFusionReport(exampleData);
-    showStage('fusion');
-}
-
-
 // --- Initial Load ---
-showStage('input');
+updateProgressBar('input');
+
 </script>
 </body>
 </html>
