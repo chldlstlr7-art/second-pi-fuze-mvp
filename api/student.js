@@ -17,7 +17,7 @@ const promptForStep1 = `
 Analyze the user's idea. Provide a balanced report in JSON format.
 Find a real-world parallel and highlight similarities and differences.
 Also, conduct a 'text similarity check'. Find key phrases or sentences in the user's idea that are overly similar to common knowledge or existing products.
-Be concise and fast(in 10seconds), in korean.
+Be concise and fast, in korean.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
@@ -57,7 +57,7 @@ Be concise and fast(in 10seconds), in korean.
 const promptForStep2 = `
 You are a creative strategist. Synthesize the [Original Idea] and [User's Answers] into a 'Fused Idea'.
 Incorporate the user's answers to evolve the original concept.
-Be concise and fast.
+Be concise and fast, in korean.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
