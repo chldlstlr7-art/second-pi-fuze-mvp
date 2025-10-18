@@ -380,7 +380,7 @@
     async function callApi(body) {
         // (수정) 글로벌 스피너, 버튼 비활성화 제거
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2분
 
         try {
             const response = await fetch('/api/ta', { 
