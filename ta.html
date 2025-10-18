@@ -180,7 +180,7 @@
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초
 
         try {
-            const response = await fetch('/api/analyze', { // 동일한 API 엔드포인트 사용
+            const response = await fetch('/api/ta', { // 동일한 API 엔드포인트 사용
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
