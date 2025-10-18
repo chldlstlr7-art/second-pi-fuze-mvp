@@ -1,239 +1,237 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PI-Fuze: Interactive Analysis</title>
-    <style>
-        :root {
-            --primary-color: #3B82F6; /* A richer, more modern blue */
-            --secondary-color: #10B981; /* A vibrant green for success/positive elements */
-            --warning-color: #F59E0B; /* Amber for similarity points */
-            --bg-color: #F8FAFC; /* A slightly cooler background */
-            --card-bg: #FFFFFF;
-            --text-dark: #1F2937;
-            --text-light: #6B7280;
-            --border-color: #E5E7EB;
-        }
-        html { scroll-behavior: smooth; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 20px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        .container { max-width: 800px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 40px; }
-        .header h1 {
-            font-size: 2.5em;
-            font-weight: 800;
-            color: var(--text-dark);
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-        }
-        .header p { font-size: 1.1em; color: var(--text-light); margin-top: 8px; }
-        .progress-bar { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; }
-        .progress-bar::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: var(--border-color); z-index: -1; transform: translateY(-50%);}
-        .step { flex: 1; text-align: center; color: var(--text-light); font-weight: bold; position: relative; }
-        .step .dot { width: 20px; height: 20px; background-color: var(--border-color); border-radius: 50%; margin: 0 auto 10px; border: 4px solid var(--bg-color); transition: background-color 0.3s ease; }
-        .step.active .dot { background-color: var(--primary-color); }
-        .step.active { color: var(--primary-color); }
-        .card { 
-            background-color: var(--card-bg); 
-            border-radius: 16px; 
-            padding: 35px; 
-            margin-bottom: 20px; 
-            box-shadow: 0 8px 32px rgba(0, 30, 80, 0.08); 
-            border: 1px solid var(--border-color);
-            transition: opacity 0.5s ease-in-out;
-        }
-        .card.finalized {
-            opacity: 0.7;
-            background-color: #F9FAFB;
-        }
-        .hidden { display: none !important; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PI-Fuze: Interactive Analysis</title>
+    <style>
+        :root {
+            --primary-color: #3B82F6; /* A richer, more modern blue */
+            --secondary-color: #10B981; /* A vibrant green for success/positive elements */
+            --warning-color: #F59E0B; /* Amber for similarity points */
+            --bg-color: #F8FAFC; /* A slightly cooler background */
+            --card-bg: #FFFFFF;
+            --text-dark: #1F2937;
+            --text-light: #6B7280;
+            --border-color: #E5E7EB;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: var(--text-dark);
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+        .header p { font-size: 1.1em; color: var(--text-light); margin-top: 8px; }
+        .progress-bar { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; }
+        .progress-bar::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: var(--border-color); z-index: -1; transform: translateY(-50%);}
+        .step { flex: 1; text-align: center; color: var(--text-light); font-weight: bold; position: relative; }
+        .step .dot { width: 20px; height: 20px; background-color: var(--border-color); border-radius: 50%; margin: 0 auto 10px; border: 4px solid var(--bg-color); transition: background-color 0.3s ease; }
+        .step.active .dot { background-color: var(--primary-color); }
+        .step.active { color: var(--primary-color); }
+        .card { 
+            background-color: var(--card-bg); 
+            border-radius: 16px; 
+            padding: 35px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 8px 32px rgba(0, 30, 80, 0.08); 
+            border: 1px solid var(--border-color);
+            transition: opacity 0.5s ease-in-out;
+        }
+        .card.finalized {
+            opacity: 0.7;
+            background-color: #F9FAFB;
+        }
+        .hidden { display: none !important; }
 
-        .fade-in {
-            animation: fadeIn 0.6s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .fade-in {
+            animation: fadeIn 0.6s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-        textarea { width: 100%; min-height: 150px; padding: 15px; border-radius: 8px; border: 1px solid #D1D5DB; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
-        textarea:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); outline: none; }
-        
-        button { display: block; width: 100%; padding: 15px; background: linear-gradient(45deg, var(--primary-color), #60A5FA); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; margin-top: 20px; }
-        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
-        button:disabled { background: #D1D5DB; cursor: not-allowed; transform: none; box-shadow: none; }
-        
-        .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-left-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 40px auto; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
-        /* Analysis Stage Styles */
-        h3 { font-size: 1.4em; color: var(--text-dark); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); }
-        .analysis-section { margin-bottom: 30px; }
-        .criteria-list { list-style: none; padding-left: 0; display: flex; flex-wrap: wrap; gap: 10px; }
-        .criteria-list li { background-color: #EFF6FF; color: var(--primary-color); padding: 8px 15px; border-radius: 20px; font-size: 0.9em; font-weight: 500; }
-        
-        .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 20px; }
-        .gauge-container { text-align: center; }
-        
-        .comparison-card { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
-        .comparison-card h4 { margin-top: 0; color: var(--primary-color); font-size: 1.2em;}
-        
-        .comparison-point { margin-top: 20px; padding: 20px; border-radius: 8px; }
-        .comparison-point.similar { background-color: #FFFBEB; border-left: 5px solid var(--warning-color); }
-        .comparison-point.different { background-color: #ECFDF5; border-left: 5px solid var(--secondary-color); }
-        .comparison-point h4 { display: flex; align-items: center; gap: 10px; margin-top: 0; font-size: 1.1em; }
-        .comparison-point.similar h4 { color: #D97706; }
-        .comparison-point.different h4 { color: #059669; }
+        textarea { width: 100%; min-height: 150px; padding: 15px; border-radius: 8px; border: 1px solid #D1D5DB; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
+        textarea:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); outline: none; }
+        
+        button { display: block; width: 100%; padding: 15px; background: linear-gradient(45deg, var(--primary-color), #60A5FA); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; margin-top: 20px; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        button:disabled { background: #D1D5DB; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-left-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 40px auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+                #gauge-arc {
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Analysis Stage Styles */
+        h3 { font-size: 1.4em; color: var(--text-dark); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); }
+        .analysis-section { margin-bottom: 30px; }
+        .criteria-list { list-style: none; padding-left: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+        .criteria-list li { background-color: #EFF6FF; color: var(--primary-color); padding: 8px 15px; border-radius: 20px; font-size: 0.9em; font-weight: 500; }
+        
+        .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 20px; }
+        .gauge-container { text-align: center; }
+        
+        .comparison-card { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .comparison-card h4 { margin-top: 0; color: var(--primary-color); font-size: 1.2em;}
+        
+        .comparison-point { margin-top: 20px; padding: 20px; border-radius: 8px; }
+        .comparison-point.similar { background-color: #FFFBEB; border-left: 5px solid var(--warning-color); }
+        .comparison-point.different { background-color: #ECFDF5; border-left: 5px solid var(--secondary-color); }
+        .comparison-point h4 { display: flex; align-items: center; gap: 10px; margin-top: 0; font-size: 1.1em; }
+        .comparison-point.similar h4 { color: #D97706; }
+        .comparison-point.different h4 { color: #059669; }
 
-        .nav-button-container { text-align: center; margin-top: 20px; }
-        #btn-show-questions { width: auto; padding: 12px 30px; display: inline-block; background: var(--secondary-color) }
+        .nav-button-container { text-align: center; margin-top: 20px; }
+        #btn-show-questions { width: auto; padding: 12px 30px; display: inline-block; background: var(--secondary-color) }
 
-        /* Question Stage Styles */
-        .question-card { margin-bottom: 20px; background-color: #F9FAFB; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
-        .question-card label { font-weight: bold; display: block; margin-bottom: 10px; color: var(--text-dark); }
-        .question-card textarea { min-height: 80px; }
+        /* Question Stage Styles */
+        .question-card { margin-bottom: 20px; background-color: #F9FAFB; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .question-card label { font-weight: bold; display: block; margin-bottom: 10px; color: var(--text-dark); }
+        .question-card textarea { min-height: 80px; }
 
-        /* Fusion Stage Styles & New Buttons */
-        .fusion-summary { background-color: #EFF6FF; border-left: 5px solid var(--primary-color); padding: 20px; border-radius: 8px; margin-bottom: 20px;}
-        .fusion-features ul { list-style-type: none; padding-left: 0; }
-        .fusion-features li { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%2310B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>') no-repeat left center; padding-left: 30px; margin-bottom: 15px; line-height: 1.5; }
-        
-        .action-buttons-container { margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; }
-        #btn-copy-result { background: var(--secondary-color); margin-bottom: 20px; }
-        .feedback-section { text-align: center; }
-        .feedback-section p { font-weight: bold; color: var(--text-light); margin-bottom: 10px;}
-        .feedback-buttons { display: flex; justify-content: center; gap: 15px; }
-        .feedback-btn { width: 80px; padding: 10px; font-size: 24px; background: none; border: 2px solid var(--border-color); border-radius: 50px; transition: background-color 0.2s, transform 0.2s; margin: 0; }
-        .feedback-btn:hover { background-color: #f0f0f0; transform: scale(1.1); }
-        .feedback-btn.selected { background-color: var(--secondary-color); border-color: var(--secondary-color); color: white; }
+        /* Fusion Stage Styles & New Buttons */
+        .fusion-summary { background-color: #EFF6FF; border-left: 5px solid var(--primary-color); padding: 20px; border-radius: 8px; margin-bottom: 20px;}
+        .fusion-features ul { list-style-type: none; padding-left: 0; }
+        .fusion-features li { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%2310B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>') no-repeat left center; padding-left: 30px; margin-bottom: 15px; line-height: 1.5; }
+        
+        .action-buttons-container { margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        #btn-copy-result { background: var(--secondary-color); margin-bottom: 20px; }
+        .feedback-section { text-align: center; }
+        .feedback-section p { font-weight: bold; color: var(--text-light); margin-bottom: 10px;}
+        .feedback-buttons { display: flex; justify-content: center; gap: 15px; }
+        .feedback-btn { width: 80px; padding: 10px; font-size: 24px; background: none; border: 2px solid var(--border-color); border-radius: 50px; transition: background-color 0.2s, transform 0.2s; margin: 0; }
+        .feedback-btn:hover { background-color: #f0f0f0; transform: scale(1.1); }
+        .feedback-btn.selected { background-color: var(--secondary-color); border-color: var(--secondary-color); color: white; }
 
-        @media (min-width: 768px) {
-            .analysis-grid { grid-template-columns: 220px 1fr; align-items: flex-start; }
-        }
-    </style>
+        @media (min-width: 768px) {
+            .analysis-grid { grid-template-columns: 220px 1fr; align-items: flex-start; }
+        }
+    </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="header">
-            <h1>PI-Fuze</h1>
-            <p>AI-TA 기반 아이디어 진단 및 융합 시스템</p>
-        </div>
+    <div class="container">
+        <div class="header">
+            <h1>PI-Fuze</h1>
+            <p>AI-TA 기반 아이디어 진단 및 융합 시스템</p>
+        </div>
 
-        <div class="progress-bar">
-            <div class="step active" id="step-1"><div class="dot"></div>아이디어 진단</div>
-            <div class="step" id="step-2"><div class="dot"></div>창의적 도발</div>
-            <div class="step" id="step-3"><div class="dot"></div>융합 아이디어</div>
-        </div>
+        <div class="progress-bar">
+            <div class="step active" id="step-1"><div class="dot"></div>아이디어 진단</div>
+            <div class="step" id="step-2"><div class="dot"></div>창의적 도발</div>
+            <div class="step" id="step-3"><div class="dot"></div>융합 아이디어</div>
+        </div>
 
-        <!-- STAGE 1: Initial Idea Input -->
-        <div id="stage-input" class="card">
-            <h2>아이디어 입력</h2>
-            <p>분석하고 싶은 아이디어나 리포트 초안의 핵심 내용을 입력해주세요.</p>
-            <textarea id="idea-input" placeholder="여기에 아이디어를 입력하세요..."></textarea>
-            <button id="btn-start-analysis">분석 시작</button>
-        </div>
+                <div id="stage-input" class="card">
+            <h2>아이디어 입력</h2>
+            <p>분석하고 싶은 아이디어나 리포트 초안의 핵심 내용을 입력해주세요.</p>
+            <textarea id="idea-input" placeholder="여기에 아이디어를 입력하세요..."></textarea>
+            <button id="btn-start-analysis">분석 시작</button>
+        </div>
 
-        <!-- The following stages will be revealed as the user progresses -->
-        
-        <!-- STAGE 2: Analysis Report -->
-        <div id="stage-analysis" class="card hidden">
-            <h2>1. 독창성 진단 리포트</h2>
-            
-            <div class="analysis-section">
-                <h3>종합 평가</h3>
-                <p id="overall-assessment"></p>
-            </div>
-            
-            <div class="analysis-grid">
-                <div class="gauge-container">
-                    <h3>구조적 독창성</h3>
-                    <svg width="200" height="120" viewBox="0 0 200 120">
-                        <defs><linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#D0021B"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#50E3C2"/></linearGradient></defs><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" /><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#gaugeGradient)" stroke-width="20" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" id="gauge-arc"/><text x="100" y="95" text-anchor="middle" font-size="24" font-weight="bold" fill="#333" id="gauge-text">0%</text>
-                    </svg>
-                </div>
-                <div class="criteria-container">
-                    <h3>판단 기준</h3>
-                    <ul id="criteria-list" class="criteria-list"></ul>
-                </div>
-            </div>
+                
+                <div id="stage-analysis" class="card hidden">
+            <h2>1. 독창성 진단 리포트</h2>
+            
+            <div class="analysis-section">
+                <h3>종합 평가</h3>
+                <p id="overall-assessment"></p>
+            </div>
+            
+            <div class="analysis-grid">
+                <div class="gauge-container">
+                    <h3>구조적 독창성</h3>
+                                        <svg width="200" height="120" viewBox="0 0 200 120">
+                        <defs><linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#D0021B"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#50E3C2"/></linearGradient></defs><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" /><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#gaugeGradient)" stroke-width="20" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" id="gauge-arc"/><text x="100" y="95" text-anchor="middle" font-size="24" font-weight="bold" fill="#333" id="gauge-text">0%</text>
+                                            </svg>
+                </div>
+                <div class="criteria-container">
+                    <h3>판단 기준</h3>
+                    <ul id="criteria-list" class="criteria-list"></ul>
+                </div>
+            </div>
 
-            <div class="analysis-section">
-                <h3>유사 사례 심층 분석</h3>
-                <div class="comparison-card">
-                    <h4>유사사례: <span id="comparison-name" style="font-weight:bold;"></span></h4>
-                    <p id="comparison-desc"></p>
-                </div>
-                <div class="comparison-point similar">
-                    <h4>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
-                        구조적 유사점
-                    </h4>
-                    <p id="points-similarity"></p>
-                </div>
-                <div class="comparison-point different">
-                    <h4>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
-                        차별점 및 독창성
-                    </h4>
-                    <p id="points-difference"></p>
-                </div>
-            </div>
-            
-            <div class="nav-button-container">
-                <button id="btn-show-questions">질문에 답변하기</button>
-            </div>
-        </div>
+            <div class="analysis-section">
+                <h3>유사 사례 심층 분석</h3>
+                <div class="comparison-card">
+                    <h4>유사사례: <span id="comparison-name" style="font-weight:bold;"></span></h4>
+                    <p id="comparison-desc"></p>
+                </div>
+                <div class="comparison-point similar">
+                    <h4>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+                        구조적 유사점
+                    </h4>
+                    <p id="points-similarity"></p>
+                </div>
+                <div class="comparison-point different">
+                    <h4>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
+                        차별점 및 독창성
+                    </h4>
+                    <p id="points-difference"></p>
+                </div>
+            </div>
+            
+            <div class="nav-button-container">
+                <button id="btn-show-questions">질문에 답변하기</button>
+            </div>
+        </div>
 
-        <!-- STAGE 3: Question & Answer -->
-        <div id="stage-questions" class="card hidden">
-            <h2>2. 창의적 도발 질문</h2>
-            <p>AI가 제안한 아래 질문들에 답변하며 아이디어를 확장시켜 보세요.</p>
-            <div id="questions-container"></div>
-            <button id="btn-submit-answers">답변 제출 및 융합 아이디어 생성</button>
-        </div>
+                <div id="stage-questions" class="card hidden">
+            <h2>2. 창의적 도발 질문</h2>
+            <p>AI가 제안한 아래 질문들에 답변하며 아이디어를 확장시켜 보세요.</p>
+            <div id="questions-container"></div>
+            <button id="btn-submit-answers">답변 제출 및 융합 아이디어 생성</button>
+        </div>
 
-        <!-- STAGE 4: Fusion Result -->
-        <div id="stage-fusion" class="card hidden">
-            <h2>3. 최종 융합 아이디어 제안</h2>
-            <div class="fusion-summary">
-                <h3 id="fusion-title" style="color: var(--primary-color);"></h3>
-                <p id="fusion-summary-text"></p>
-            </div>
-            <h3>연결고리 분석</h3>
-            <p id="fusion-connection"></p>
-            <div class="fusion-features">
-                <h3>주요 특징</h3>
-                <ul id="fusion-features-list"></ul>
-            </div>
-            
-            <div class="action-buttons-container">
-                <button id="btn-copy-result">결과 텍스트로 복사</button>
-                <div class="feedback-section">
-                    <p>이 제안이 도움이 되었나요?</p>
-                    <div class="feedback-buttons">
-                        <button class="feedback-btn" id="btn-feedback-yes">👍</button>
-                        <button class="feedback-btn" id="btn-feedback-no">👎</button>
-                    </div>
-                    <p id="feedback-message" style="color: var(--secondary-color); font-weight: bold; margin-top: 10px;"></p>
-                </div>
-            </div>
+                <div id="stage-fusion" class="card hidden">
+            <h2>3. 최종 융합 아이디어 제안</h2>
+            <div class="fusion-summary">
+                <h3 id="fusion-title" style="color: var(--primary-color);"></h3>
+                <p id="fusion-summary-text"></p>
+            </div>
+            <h3>연결고리 분석</h3>
+            <p id="fusion-connection"></p>
+            <div class="fusion-features">
+                <h3>주요 특징</h3>
+                <ul id="fusion-features-list"></ul>
+            </div>
+            
+            <div class="action-buttons-container">
+                <button id="btn-copy-result">결과 텍스트로 복사</button>
+                <div class="feedback-section">
+                    <p>이 제안이 도움이 되었나요?</p>
+                    <div class="feedback-buttons">
+                        <button class="feedback-btn" id="btn-feedback-yes">👍</button>
+                        <button class="feedback-btn" id="btn-feedback-no">👎</button>
+                    </div>
+                    <p id="feedback-message" style="color: var(--secondary-color); font-weight: bold; margin-top: 10px;"></p>
+                </div>
+            </div>
 
-            <button id="btn-restart">새로운 아이디어 분석하기</button>
-        </div>
-        
-        <!-- Loading Spinner (moves to the bottom) -->
-        <div id="loading-spinner" class="spinner hidden"></div>
-    </div>
+            <button id="btn-restart">새로운 아이디어 분석하기</button>
+        </div>
+        
+                <div id="loading-spinner" class="spinner hidden"></div>
+    </div>
 
 <script>
 // --- State Management ---
@@ -244,15 +242,15 @@ let fusionResultForCopy = '';
 
 // --- DOM Elements ---
 const stages = {
-    input: document.getElementById('stage-input'),
-    analysis: document.getElementById('stage-analysis'),
-    questions: document.getElementById('stage-questions'),
-    fusion: document.getElementById('stage-fusion'),
+    input: document.getElementById('stage-input'),
+    analysis: document.getElementById('stage-analysis'),
+    questions: document.getElementById('stage-questions'),
+    fusion: document.getElementById('stage-fusion'),
 };
 const steps = {
-    1: document.getElementById('step-1'),
-    2: document.getElementById('step-2'),
-    3: document.getElementById('step-3'),
+    1: document.getElementById('step-1'),
+    2: document.getElementById('step-2'),
+    3: document.getElementById('step-3'),
 };
 const spinner = document.getElementById('loading-spinner');
 const ideaInput = document.getElementById('idea-input');
@@ -276,194 +274,268 @@ btnFeedbackNo.addEventListener('click', () => handleFeedback(false));
 
 // --- UI Control ---
 function updateProgressBar(stageName) {
-    Object.values(steps).forEach(step => step.classList.remove('active'));
-    if (stageName === 'input' || stageName === 'analysis') {
-        steps[1].classList.add('active');
-    } else if (stageName === 'questions') {
-        steps[1].classList.add('active');
-        steps[2].classList.add('active');
-    } else if (stageName === 'fusion') {
-        [steps[1], steps[2], steps[3]].forEach(s => s.classList.add('active'));
-    }
+    Object.values(steps).forEach(step => step.classList.remove('active'));
+    if (stageName === 'input' || stageName === 'analysis') {
+        steps[1].classList.add('active');
+    } else if (stageName === 'questions') {
+        steps[1].classList.add('active');
+        steps[2].classList.add('active');
+    } else if (stageName === 'fusion') {
+        [steps[1], steps[2], steps[3]].forEach(s => s.classList.add('active'));
+    }
 }
 
 function revealStage(stageName) {
-    const stageElement = stages[stageName];
-    if (stageElement) {
-        stageElement.classList.remove('hidden');
-        stageElement.classList.add('fade-in');
-        // Scroll to the new stage
-        stageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    updateProgressBar(stageName);
+    const stageElement = stages[stageName];
+    if (stageElement) {
+        stageElement.classList.remove('hidden');
+        stageElement.classList.add('fade-in');
+        // Scroll to the new stage
+        stageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    updateProgressBar(stageName);
 }
 
 function finalizeStage(stageName) {
-    const stageElement = stages[stageName];
-    if (stageElement) {
-        stageElement.classList.add('finalized');
-        // Disable all buttons and textareas within this stage
-        const interactiveElements = stageElement.querySelectorAll('button, textarea');
-        interactiveElements.forEach(el => el.disabled = true);
-    }
+    const stageElement = stages[stageName];
+    if (stageElement) {
+        stageElement.classList.add('finalized');
+        // Disable all buttons and textareas within this stage
+        const interactiveElements = stageElement.querySelectorAll('button, textarea');
+        interactiveElements.forEach(el => el.disabled = true);
+    }
 }
 
 
 // --- API Call Logic ---
+// [수정] 테스트를 위해 실제 fetch 대신 가짜 데이터를 반환하는 시뮬레이션 함수로 변경
 async function callApi(body) {
-    spinner.classList.remove('hidden');
-    spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
+    spinner.classList.remove('hidden');
+    spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // 2초간 로딩 시뮬레이션
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    spinner.classList.add('hidden');
 
-    try {
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({ error: "An unknown server error occurred." }));
-            throw new Error(errData.error || `서버 오류: ${response.statusText}`);
-        }
-        return await response.json();
-    } catch (error) {
-        if (error.name === 'AbortError') {
-             alert('오류: AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요. (Timeout)');
-        } else {
-             alert(`오류가 발생했습니다: ${error.message}`);
-        }
-        location.reload();
-    } finally {
-        spinner.classList.add('hidden');
-    }
+    // --- 1단계 (분석) 요청 시뮬레이션 ---
+    if (body.stage === 'analyze') {
+        return {
+            // 40~99 사이의 랜덤 점수를 생성하여 애니메이션 테스트
+            originalityScore: Math.floor(Math.random() * 60) + 40, 
+            overallAssessment: "입력된 아이디어는 '개인 맞춤형 AI 학습 경로 추천'이라는 핵심 개념을 가지고 있습니다. 이는 이미 시장에 다수 존재하는 적응형 학습(Adaptive Learning) 솔루션과 유사성이 발견됩니다.",
+            judgmentCriteria: ["AI 맞춤화", "학습 경로", "데이터 기반", "동기부여 시스템"],
+            comparisonAnalysis: {
+                existingExampleName: "듀오링고 (Duolingo)",
+                existingExampleDesc: "게임화(Gamification) 요소를 도입한 대표적인 언어 학습 앱으로, AI를 활용해 사용자 수준에 맞는 문제를 제공합니다.",
+                pointsOfSimilarity: "AI를 사용하여 사용자 데이터를 분석하고, 개인화된 학습 콘텐츠를 제공한다는 점에서 구조적으로 유사합니다. 또한, 학습 동기를 부여하는 시스템을 갖추고 있습니다.",
+                pointsOfDifference: "제안된 아이디어는 '학습 경로' 자체를 동적으로 생성하고 시각화하는 데 더 중점을 둡니다. 반면 듀오링고는 정해진 스킬 트리를 기반으로 문제를 출제하는 방식에 가깝습니다."
+            },
+            questions: [
+                "만약 이 학습 경로 추천 시스템을 '언어 학습'이 아닌, '신입사원 온보딩 교육'에 적용한다면 어떤 모습일까요?",
+                "학습자가 AI가 제안한 경로를 '의도적으로 이탈'하고 싶을 때, 시스템은 어떻게 반응해야 할까요?",
+                "학습 경로의 '최종 목표'가 명확하지 않은 추상적인 분야(예: 창의력 개발)에도 이 시스템을 적용할 수 있을까요?"
+            ]
+        };
+    } 
+    // --- 2단계 (융합) 요청 시뮬레이션 ---
+    else if (body.stage === 'fuse') {
+        return {
+            fusionTitle: "T-Fuze: 기업용 '탐험형' AI 온보딩 내비게이터",
+            fusionSummary: "기존의 선형적인 신입사원 교육을 탈피, '신입사원 온보딩'이라는 명확한 목표와 '의도적 경로 이탈'이라는 자율성을 결합한 AI 기반 적응형 온보딩 시스템입니다. AI가 최적의 학습 경로(직무, 문화)를 제안하되, 학습자가 스스로 '탐험'하며 발견한 지식을 시스템이 역으로 학습하여 전체 온보딩 맵을 동적으로 업데이트합니다.",
+            connection: "초기 아이디어의 'AI 학습 경로'와 1번 질문('신입사원 온보딩')을 결합하고, 2번 질문('경로 이탈')을 '자율적 탐험'이라는 핵심 기능으로 수용하여 아이디어를 융합했습니다.",
+            keyFeatures: [
+                "AI 기반 개인 맞춤형 온보딩 경로 제안 (직무 역량, 사내 문화, 필수 규정)",
+                "'탐험 모드' 제공: 신입사원이 공식 경로 외의 자료(예: 사내 위키, 동료 프로필)를 탐색할 수 있는 자율성 부여",
+                "지식 그래프 시각화: 탐험한 내용과 공식 경로가 어떻게 연결되는지 보여주는 동적 마인드맵",
+                "역방향 피드백 루프: '탐험'을 통해 발견된 유용한 비공식 지식을 AI가 학습하여 공식 온보딩 경로에 편입 제안"
+            ]
+        };
+    }
 }
+/*
+// --- 원본 API Call Logic (참고용으로 주석 처리) ---
+async function callApi(body) {
+    spinner.classList.remove('hidden');
+    spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
+
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({ error: "An unknown server error occurred." }));
+            throw new Error(errData.error || `서버 오류: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        if (error.name === 'AbortError') {
+             alert('오류: AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요. (Timeout)');
+        } else {
+             alert(`오류가 발생했습니다: ${error.message}`);
+        }
+        location.reload();
+    } finally {
+        spinner.classList.add('hidden');
+    }
+}
+*/
 
 // --- Step 1: Analysis ---
 async function handleAnalysisRequest() {
-    originalIdea = ideaInput.value.trim();
-    if (!originalIdea) {
-        alert('아이디어를 입력해주세요.');
-        return;
-    }
-    finalizeStage('input');
-    const data = await callApi({ stage: 'analyze', idea: originalIdea });
-    if (data) {
-        renderAnalysisReport(data);
-        renderQuestionInputs(data.questions);
-        revealStage('analysis');
-    }
+    originalIdea = ideaInput.value.trim();
+    if (!originalIdea) {
+        alert('아이디어를 입력해주세요.');
+        return;
+    }
+    finalizeStage('input');
+    const data = await callApi({ stage: 'analyze', idea: originalIdea });
+    if (data) {
+        renderAnalysisReport(data);
+        renderQuestionInputs(data.questions);
+        revealStage('analysis');
+    }
 }
 
+// [수정] 게이지 로직 변경
 function renderAnalysisReport(data) {
-    const { originalityScore, overallAssessment, judgmentCriteria, comparisonAnalysis } = data;
-    
-    // Render Gauge
-    const gaugeNeedle = document.getElementById('gauge-needle');
-    const gaugeText = document.getElementById('gauge-text');
-    const angle = -90 + (originalityScore / 100) * 180;
-    gaugeNeedle.setAttribute('transform', `rotate(${angle} 100 100)`);
-    gaugeText.textContent = `${originalityScore}%`;
+    const { originalityScore, overallAssessment, judgmentCriteria, comparisonAnalysis } = data;
+    
+    // --- Render Gauge (수정된 부분) ---
+    const gaugeArc = document.getElementById('gauge-arc'); // 바늘 대신 게이지 바(arc)를 선택
+    const gaugeText = document.getElementById('gauge-text');
+    const maxDashArray = 251.2; // HTML <path>에 정의된 stroke-dasharray 값
+    
+    // 점수에 따른 offset 계산 (0% = 251.2, 100% = 0)
+    const offset = maxDashArray * (1 - (originalityScore / 100));
+    
+    // CSS transition이 적용되도록 style 속성 변경
+    // (setTimeout을 사용하여 화면에 렌더링 된 후 애니메이션이 시작되도록 함)
+    setTimeout(() => {
+        gaugeArc.style.strokeDashoffset = offset;
+        // 텍스트 애니메이션 (CSS transition 시간 1.2s와 동일하게 1200ms)
+        animateValue(gaugeText, 0, originalityScore, 1200);
+    }, 100);
+    // --- 게이지 수정 끝 ---
 
-    // Render Texts
-    document.getElementById('overall-assessment').textContent = overallAssessment;
-    
-    // Render Criteria
-    const criteriaList = document.getElementById('criteria-list');
-    criteriaList.innerHTML = '';
-    judgmentCriteria.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        criteriaList.appendChild(li);
-    });
+    // Render Texts
+    document.getElementById('overall-assessment').textContent = overallAssessment;
+    
+    // Render Criteria
+    const criteriaList = document.getElementById('criteria-list');
+    criteriaList.innerHTML = '';
+    judgmentCriteria.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        criteriaList.appendChild(li);
+    });
 
-    // Render Comparison
-    document.getElementById('comparison-name').textContent = comparisonAnalysis.existingExampleName;
-    document.getElementById('comparison-desc').textContent = comparisonAnalysis.existingExampleDesc;
-    document.getElementById('points-similarity').textContent = comparisonAnalysis.pointsOfSimilarity;
-    document.getElementById('points-difference').textContent = comparisonAnalysis.pointsOfDifference;
+    // Render Comparison
+    document.getElementById('comparison-name').textContent = comparisonAnalysis.existingExampleName;
+    document.getElementById('comparison-desc').textContent = comparisonAnalysis.existingExampleDesc;
+    document.getElementById('points-similarity').textContent = comparisonAnalysis.pointsOfSimilarity;
+    document.getElementById('points-difference').textContent = comparisonAnalysis.pointsOfDifference;
 }
 
 
 // --- Step 2: Questions ---
 function renderQuestionInputs(questions) {
-    aiQuestions = questions;
-    const container = document.getElementById('questions-container');
-    container.innerHTML = '';
-    questions.forEach((q, index) => {
-        const card = document.createElement('div');
-        card.className = 'question-card';
-        card.innerHTML = `<label for="answer-${index}">질문 ${index + 1}: ${q}</label><textarea id="answer-${index}" placeholder="답변을 입력하세요..."></textarea>`;
-        container.appendChild(card);
-    });
+    aiQuestions = questions;
+    const container = document.getElementById('questions-container');
+    container.innerHTML = '';
+    questions.forEach((q, index) => {
+        const card = document.createElement('div');
+        card.className = 'question-card';
+        card.innerHTML = `<label for="answer-${index}">질문 ${index + 1}: ${q}</label><textarea id="answer-${index}" placeholder="답변을 입력하세요..."></textarea>`;
+        container.appendChild(card);
+    });
 }
 
 // --- Step 3: Fusion ---
 async function handleFusionRequest() {
-    userAnswers = aiQuestions.map((_, index) => document.getElementById(`answer-${index}`).value.trim());
-    if (userAnswers.some(answer => answer === '')) {
-        alert('모든 질문에 답변해주세요.');
-        return;
-    }
-    finalizeStage('analysis');
-    finalizeStage('questions');
-    const data = await callApi({ stage: 'fuse', originalIdea: originalIdea, answers: userAnswers });
-    if (data) {
-        renderFusionReport(data);
-        revealStage('fusion');
-    }
+    userAnswers = aiQuestions.map((_, index) => document.getElementById(`answer-${index}`).value.trim());
+    if (userAnswers.some(answer => answer === '')) {
+        alert('모든 질문에 답변해주세요.');
+        return;
+    }
+    finalizeStage('analysis');
+    finalizeStage('questions');
+    const data = await callApi({ stage: 'fuse', originalIdea: originalIdea, answers: userAnswers });
+    if (data) {
+        renderFusionReport(data);
+        revealStage('fusion');
+    }
 }
 
 function renderFusionReport(data) {
-    const { fusionTitle, fusionSummary, connection, keyFeatures } = data;
-    document.getElementById('fusion-title').textContent = fusionTitle;
-    document.getElementById('fusion-summary-text').textContent = fusionSummary;
-    document.getElementById('fusion-connection').textContent = connection;
-    
-    const list = document.getElementById('fusion-features-list');
-    list.innerHTML = '';
-    keyFeatures.forEach(feature => {
-        const li = document.createElement('li');
-        li.textContent = feature;
-        list.appendChild(li);
-    });
+    const { fusionTitle, fusionSummary, connection, keyFeatures } = data;
+    document.getElementById('fusion-title').textContent = fusionTitle;
+    document.getElementById('fusion-summary-text').textContent = fusionSummary;
+    document.getElementById('fusion-connection').textContent = connection;
+    
+    const list = document.getElementById('fusion-features-list');
+    list.innerHTML = '';
+    keyFeatures.forEach(feature => {
+        const li = document.createElement('li');
+        li.textContent = feature;
+        list.appendChild(li);
+    });
 
-    // Prepare text for copying
-    fusionResultForCopy = `## 융합 아이디어: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${keyFeatures.map(f => `- ${f}`).join('\n')}`;
+    // Prepare text for copying
+    fusionResultForCopy = `## 융합 아이디어: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${keyFeatures.map(f => `- ${f}`).join('\n')}`;
 }
 
 // --- Utility Functions ---
+
+// [수정] 숫자 카운트업 애니메이션을 위한 헬퍼 함수 추가
+function animateValue(obj, start, end, duration) {
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const value = Math.floor(progress * (end - start) + start);
+        obj.textContent = `${value}%`;
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        }
+    };
+    window.requestAnimationFrame(step);
+}
+
 function handleCopyResult() {
-    navigator.clipboard.writeText(fusionResultForCopy).then(() => {
-        const originalText = btnCopyResult.textContent;
-        btnCopyResult.textContent = '복사 완료!';
-        btnCopyResult.disabled = true;
-        setTimeout(() => {
-            btnCopyResult.textContent = originalText;
-            btnCopyResult.disabled = false;
-        }, 2000);
-    }).catch(err => {
-        console.error('Copy failed', err);
-        alert('복사에 실패했습니다.');
-    });
+    navigator.clipboard.writeText(fusionResultForCopy).then(() => {
+        const originalText = btnCopyResult.textContent;
+        btnCopyResult.textContent = '복사 완료!';
+        btnCopyResult.disabled = true;
+        setTimeout(() => {
+            btnCopyResult.textContent = originalText;
+            btnCopyResult.disabled = false;
+        }, 2000);
+    }).catch(err => {
+        console.error('Copy failed', err);
+        alert('복사에 실패했습니다.');
+    });
 }
 
 function handleFeedback(isHelpful) {
-    feedbackMessage.textContent = '피드백을 주셔서 감사합니다!';
-    btnFeedbackYes.disabled = true;
-    btnFeedbackNo.disabled = true;
-    btnFeedbackYes.classList.remove('selected');
-    btnFeedbackNo.classList.remove('selected');
-    if (isHelpful) {
-        btnFeedbackYes.classList.add('selected');
-    } else {
-        btnFeedbackNo.classList.add('selected');
-    }
+    feedbackMessage.textContent = '피드백을 주셔서 감사합니다!';
+    btnFeedbackYes.disabled = true;
+    btnFeedbackNo.disabled = true;
+    btnFeedbackYes.classList.remove('selected');
+    btnFeedbackNo.classList.remove('selected');
+    if (isHelpful) {
+        btnFeedbackYes.classList.add('selected');
+    } else {
+        btnFeedbackNo.classList.add('selected');
+    }
 }
 
 // --- Initial Load ---
@@ -472,4 +544,3 @@ updateProgressBar('input');
 </script>
 </body>
 </html>
-
