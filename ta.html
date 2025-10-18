@@ -113,7 +113,7 @@
              color: var(--primary-color);
         }
 
-        /* --- START: NEW SIMILARITY CARD STYLES --- */
+        /* --- START: SIMILARITY CARD STYLES (수정됨) --- */
         #result-similar-phrases {
             list-style-type: none; /* 기본 리스트 스타일 제거 */
             padding-left: 0;
@@ -134,6 +134,7 @@
             font-size: 1.1em;
             border-left: 4px solid var(--warning-color); /* 좌측 강조선 */
             padding-left: 10px;
+            word-break: keep-all; /* 문구가 잘리지 않도록 */
         }
         .suspicious-details {
             font-size: 0.95em;
@@ -145,7 +146,15 @@
             color: #D97706; /* 경고 텍스트 (다크) */
             font-weight: 600;
         }
-        /* --- END: NEW SIMILARITY CARD STYLES --- */
+        .suspicious-details a {
+            color: #059669; /* TA 기본 색상 */
+            text-decoration: underline;
+            word-break: break-all; /* 긴 URL이 카드를 뚫지 않도록 */
+        }
+        .suspicious-details a:hover {
+            color: #047857;
+        }
+        /* --- END: SIMILARITY CARD STYLES --- */
 
     </style>
 </head>
@@ -182,7 +191,7 @@
             </div>
             
             <div class="report-output" style="margin-top: 20px; background-color: #F9FAFB;">
-                <h3 style="color: #D97706;">유사 의심 문구 (참고)</h3>
+                <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3>
                 <ul id="result-similar-phrases">
                     </ul>
             </div>
@@ -215,7 +224,6 @@
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초
 
         try {
-            // (수정) : API 엔드포인트
             const response = await fetch('/api/ta', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -250,7 +258,6 @@
             return;
         }
         
-        // (수정) : TA용 stage 이름
         const data = await callApi({ 
             stage: 'assess_report', 
             reportText: reportText 
@@ -292,7 +299,7 @@
             });
         }
 
-        // --- (수정) : 상세 유사성 카드 렌더링 ---
+        // --- (수정) : 상세 유사성 카드 렌더링 (URL 포함) ---
         const similarList = document.getElementById('result-similar-phrases');
         similarList.innerHTML = ''; // 리스트 초기화
         
@@ -301,12 +308,24 @@
                 const li = document.createElement('li');
                 li.className = 'similarity-card'; // CSS 클래스 적용
                 
+                // URL을 처리하는 로직
+                let urlHTML = '';
+                if (item.sourceURL && item.sourceURL.startsWith('http')) {
+                    // 유효한 URL이면 링크 생성
+                    urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank">${item.sourceURL}</a>`;
+                } else if (item.sourceURL && item.sourceURL !== 'N/A') {
+                    // URL은 아니지만 'N/A'도 아닌 텍스트 정보
+                    urlHTML = `<br><strong>추정 URL:</strong> ${item.sourceURL}`;
+                }
+                // 'N/A'인 경우 아무것도 표시하지 않음
+
                 // HTML 구조로 상세 정보 삽입
                 li.innerHTML = `
                     <p class="suspicious-phrase">"${item.phrase}"</p>
                     <div class="suspicious-details">
-                        <strong>유사 출처 (추정):</strong> ${item.likelySource}<br>
-                        <strong>유사성 유형:</strong> ${item.similarityType}
+                        <strong>유사 출처 (추정):</strong> ${item.likelySource}
+                        ${urlHTML} 
+                        <br><strong>유사성 유형:</strong> ${item.similarityType}
                     </div>
                 `;
                 similarList.appendChild(li);
