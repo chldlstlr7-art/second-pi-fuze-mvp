@@ -9,36 +9,98 @@ const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash", 
 });
 
-// --- 프롬프트 엔지니어링 ---
 
-// [1단계] 자동 분류 및 분석용 프롬프트 (고도화 버전)
-const promptForStep1 = `
-You are an expert AI consultant with web search capabilities. Your first task is to automatically classify the user's text.
-After classifying, you must perform a detailed plagiarism and originality analysis.
+// --- 프롬프트 엔지니어링 (역할 분리) ---
+
+// [0단계] 문서 유형을 빠르게 분류하기 위한 전용 프롬프트
+const promptForClassification = `
+Analyze the user's text and classify it into ONE of the following three categories: 'idea', 'essay', or 'reflection'.
+Respond with ONLY the category name in English and nothing else.
+`;
+
+// [1단계-A] 아이디어/기획안 분석용 프롬프트
+const promptForIdea = `
+You are an expert AI consultant with web search capabilities. You must analyze the user's idea based on innovation criteria.
 Provide a balanced report in JSON format, in Korean. Be extremely fast and concise.
 
 **Plagiarism Analysis Rules (Crucial):**
-1.  **Differentiate Plagiarism vs. Citation:** Analyze the context. If a similar sentence is enclosed in quotes ("...") or has a clear source attribution like (Author, Year), classify it as 'properCitation'. If it's presented as the user's own thought without attribution, classify it as 'plagiarismSuspicion'.
-2.  **Handle Common Knowledge:** If a sentence is a widely known definition or a common phrase (e.g., "AI is a branch of computer science..."), classify it as 'commonKnowledge'. Do not flag it as plagiarism.
-3.  **Verify URLs:** When providing a 'sourceLink' for structural plagiarism, you MUST use your search tool to find a valid, working URL. Separate any descriptive text from the URL itself to prevent broken links.
+1.  **Differentiate Plagiarism vs. Citation:** If a similar sentence has clear source attribution like (Author, Year) or is in quotes, classify it as 'properCitation'. Otherwise, classify it as 'plagiarismSuspicion'.
+2.  **Handle Common Knowledge:** If a sentence is a common definition, classify it as 'commonKnowledge'.
+3.  **Verify URLs:** When providing a 'sourceLink' for structural plagiarism, you MUST use your search tool to find a valid, working URL.
 
 **JSON OUTPUT RULES:**
-- YOU MUST RESPOND WITH A VALID JSON OBJECT.
-- Do not include markdown \`\`\`json or any text outside the JSON structure.
+- Respond with a VALID JSON object. Do not include markdown \`\`\`json.
 
 **JSON STRUCTURE:**
 {
-  "documentType": "<'아이디어/기획안', '논설문/에세이', or '소감문/리뷰'>",
-  "originalityScore": <Number 0-100>,
-  "overallAssessment": "<One-paragraph assessment>",
-  "judgmentCriteria": ["<Criterion 1>", "<Criterion 2>", "<Criterion 3>"],
+  "documentType": "아이디어/기획안",
+  "originalityScore": <Number 0-100 for structural originality>,
+  "overallAssessment": "<One-paragraph assessment of the idea's originality and potential.>",
+  "judgmentCriteria": ["문제 정의의 독창성", "해결 방식의 참신성", "가치 제안의 차별성"],
   "plagiarismReport": {
-    "plagiarismSuspicion": [{ "similarSentence": "<...>", "source": "<...>", "similarityScore": <...> }],
-    "properCitation": [{ "citedSentence": "<...>", "source": "<...>" }],
+    "plagiarismSuspicion": [{ "similarSentence": "<found sentence>", "source": "<estimated source>", "similarityScore": <number> }],
+    "properCitation": [{ "citedSentence": "<found sentence>", "source": "<user's citation>" }],
     "commonKnowledge": ["<list of common knowledge phrases found>"],
-    "structuralPlagiarism": [{ "sourceLogic": "<...>", "pointOfSimilarity": "<...>", "similarityLevel": "<...>", "sourceLink": "<VALID URL>" }]
+    "structuralPlagiarism": [{ "sourceLogic": "<name of similar logic/model>", "pointOfSimilarity": "<explanation>", "similarityLevel": "<One of: '매우 낮음', '낮음', '보통', '주의', '높음', '매우 높음'>", "sourceLink": "<VALID URL>" }]
   },
-  "questions": ["<...>", "<...>", "<...>"]
+  "questions": ["<Question about problem definition>", "<Question about solution approach>", "<Question about value proposition>"]
+}
+`;
+
+// [1단계-B] 논설문/에세이 분석용 프롬프트
+const promptForEssay = `
+You are an expert AI writing tutor with web search capabilities. You must analyze the user's essay based on argumentative criteria.
+Provide a balanced report in JSON format, in Korean. Be extremely fast and concise.
+
+**Plagiarism Analysis Rules (Crucial):**
+1.  **Differentiate Plagiarism vs. Citation:** If a similar sentence has clear source attribution like (Author, Year) or is in quotes, classify it as 'properCitation'. Otherwise, classify it as 'plagiarismSuspicion'.
+2.  **Handle Common Knowledge:** If a sentence is a common definition, classify it as 'commonKnowledge'.
+3.  **Verify URLs:** When providing a 'sourceLink' for structural plagiarism, you MUST use your search tool to find a valid, working URL.
+
+**JSON OUTPUT RULES:**
+- Respond with a VALID JSON object. Do not include markdown \`\`\`json.
+
+**JSON STRUCTURE:**
+{
+  "documentType": "논설문/에세이",
+  "originalityScore": <Number 0-100 for argumentative originality>,
+  "overallAssessment": "<One-paragraph assessment of the essay's logical strength and originality.>",
+  "judgmentCriteria": ["주장의 명료성", "논리 구조의 독창성", "근거의 참신성"],
+  "plagiarismReport": {
+    "plagiarismSuspicion": [{ "similarSentence": "<found sentence>", "source": "<estimated source>", "similarityScore": <number> }],
+    "properCitation": [{ "citedSentence": "<found sentence>", "source": "<user's citation>" }],
+    "commonKnowledge": ["<list of common knowledge phrases found>"],
+    "structuralPlagiarism": [{ "sourceLogic": "<name of similar argumentative structure>", "pointOfSimilarity": "<explanation of similar logical flow>", "similarityLevel": "<One of: '매우 낮음', '낮음', '보통', '주의', '높음', '매우 높음'>", "sourceLink": "<VALID URL>" }]
+  },
+  "questions": ["<Question about the main thesis>", "<Question about the evidence used>", "<Question about potential counterarguments>"]
+}
+`;
+
+// [1단계-C] 소감문/리뷰 분석용 프롬프트
+const promptForReflection = `
+You are an AI writing coach. You must analyze the user's reflection/review based on authenticity and expression.
+Provide a balanced report in JSON format, in Korean. Be extremely fast and concise.
+
+**Plagiarism Analysis Rules (Crucial):**
+1.  **Differentiate Plagiarism vs. Citation:** Focus on direct text similarity. If a sentence seems overly generic or copied, flag it as 'plagiarismSuspicion'.
+2.  **Handle Common Knowledge:** Identify and list common phrases under 'commonKnowledge'.
+
+**JSON OUTPUT RULES:**
+- Respond with a VALID JSON object. Do not include markdown \`\`\`json.
+
+**JSON STRUCTURE:**
+{
+  "documentType": "소감문/리뷰",
+  "originalityScore": <Number 0-100 for expressive originality (High score = less generic)>,
+  "overallAssessment": "<One-paragraph assessment of the reflection's authenticity and expressive quality.>",
+  "judgmentCriteria": ["표현의 진정성", "경험의 구체성", "텍스트 유사도"],
+  "plagiarismReport": {
+    "plagiarismSuspicion": [{ "similarSentence": "<found sentence>", "source": "<estimated source>", "similarityScore": <number> }],
+    "properCitation": [],
+    "commonKnowledge": ["<list of common knowledge phrases found>"],
+    "structuralPlagiarism": []
+  },
+  "questions": ["<Question to elicit deeper personal insight>", "<Question about a specific expression used>", "<Question about connecting the experience to a broader context>"]
 }
 `;
 
@@ -62,14 +124,14 @@ Be extremely concise and fast, in Korean.
   },
   "suggestedEdits": [
     {
-      "originalText": "<Select a specific, important paragraph from the user's [Original Idea] that needs improvement.>",
+      "originalText": "<Select a specific, important paragraph or section from the user's [Original Idea] that needs improvement.>",
       "suggestedRevision": "<Provide a rewritten, improved version of that paragraph/section, reflecting the fusion.>"
     }
   ]
 }
 `;
 
-// 4. Vercel 서버리스 함수
+// 4. Vercel 서버리스 함수 (핵심 로직: 연쇄 호출 방식으로 변경)
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -77,45 +139,60 @@ module.exports = async (req, res) => {
 
     try {
         const { stage, idea, originalIdea, answers } = req.body;
-        let prompt = "";
-        let userInput = "";
+
+        let finalJsonText;
         
         if (stage === 'analyze') {
             if (!idea) return res.status(400).json({ error: 'Missing idea.' });
-            prompt = promptForStep1;
-            userInput = `[User's Text]:\n${idea}`;
+
+            // --- API 호출 1: 문서 유형 분류 ---
+            const classificationResult = await model.generateContent(`${promptForClassification}\n\n[User's Text]:\n${idea}`);
+            const classificationResponse = await classificationResult.response;
+            const docType = classificationResponse.text().trim();
+
+            // --- API 호출 2: 분류된 유형에 맞춰 상세 분석 ---
+            let analysisPrompt = "";
+            switch(docType) {
+                case 'idea': analysisPrompt = promptForIdea; break;
+                case 'essay': analysisPrompt = promptForEssay; break;
+                case 'reflection': analysisPrompt = promptForReflection; break;
+                default: throw new Error("AI가 문서 유형을 분류하는 데 실패했습니다.");
+            }
+            
+            const analysisResult = await model.generateContent(`${analysisPrompt}\n\n[User's Text]:\n${idea}`);
+            const analysisResponse = await analysisResult.response;
+            finalJsonText = analysisResponse.text();
+
         } else if (stage === 'fuse') {
             if (!originalIdea || !answers) return res.status(400).json({ error: 'Missing originalIdea or answers.' });
-            prompt = promptForStep2;
-            userInput = `[Original Idea]:\n${originalIdea}\n\n[User's Answers]:\n${answers.join('\n')}`;
+            
+            const fuseResult = await model.generateContent(`${promptForStep2}\n\n[Original Idea]:\n${originalIdea}\n\n[User's Answers]:\n${answers.join('\n')}`);
+            const fuseResponse = await fuseResult.response;
+            finalJsonText = fuseResponse.text();
+        
         } else {
             return res.status(400).json({ error: 'Invalid stage provided.' });
         }
         
-        const fullPrompt = `${prompt}\n\n${userInput}`;
-        
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        let analysisResultText = response.text();
-
-        // Robust JSON Parsing
-        const jsonMatch = analysisResultText.match(/```json\s*([\s\S]*?)\s*```/);
+        // --- 최종 JSON 파싱 및 응답 (공통 로직) ---
+        let jsonTextToParse = finalJsonText;
+        const jsonMatch = jsonTextToParse.match(/```json\s*([\s\S]*?)\s*```/);
         if (jsonMatch && jsonMatch[1]) {
-            analysisResultText = jsonMatch[1];
+            jsonTextToParse = jsonMatch[1];
         } else {
-             const firstBrace = analysisResultText.indexOf('{');
-             const lastBrace = analysisResultText.lastIndexOf('}');
+             const firstBrace = jsonTextToParse.indexOf('{');
+             const lastBrace = jsonTextToParse.lastIndexOf('}');
              if (firstBrace !== -1 && lastBrace > firstBrace) {
-                  analysisResultText = analysisResultText.substring(firstBrace, lastBrace + 1);
+                  jsonTextToParse = jsonTextToParse.substring(firstBrace, lastBrace + 1);
              }
         }
         
         try {
-            const analysisResultJson = JSON.parse(analysisResultText);
-            res.status(200).json(analysisResultJson);
+            const resultJson = JSON.parse(jsonTextToParse);
+            res.status(200).json(resultJson);
         } catch (e) {
             console.error("JSON Parsing Error:", e.message);
-            console.error("Original AI Response:", analysisResultText); 
+            console.error("Original AI Response:", jsonTextToParse); 
             throw new Error(`AI가 유효하지 않은 JSON 형식으로 응답했습니다.`);
         }
 
