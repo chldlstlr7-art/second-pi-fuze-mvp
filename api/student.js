@@ -91,6 +91,7 @@ module.exports = async (req, res) => {
     console.time("Total Request Time"); 
 
     if (req.method !== 'POST') {
+        console.timeEnd("Total Request Time"); // 타이머 종료
         return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
 
@@ -100,7 +101,10 @@ module.exports = async (req, res) => {
         let finalResultJson;
         
         if (stage === 'analyze') {
-            if (!idea) return res.status(400).json({ error: 'Missing idea.' });
+            if (!idea) {
+                console.timeEnd("Total Request Time"); // 타이머 종료
+                return res.status(400).json({ error: 'Missing idea.' });
+            }
 
             console.time("Parallel API Calls");
 
@@ -130,7 +134,10 @@ module.exports = async (req, res) => {
             };
             
         } else if (stage === 'fuse') {
-            if (!originalIdea || !answers) return res.status(400).json({ error: 'Missing originalIdea or answers.' });
+            if (!originalIdea || !answers) {
+                console.timeEnd("Total Request Time"); // 타이머 종료
+                return res.status(400).json({ error: 'Missing originalIdea or answers.' });
+            }
             
             console.time("API Call: Fusion");
             const fuseResult = await model_1.generateContent(`${promptForStep2}\n\n[Original Idea]:\n${originalIdea}\n\n[User's Answers]:\n${answers.join('\n')}`);
@@ -140,6 +147,7 @@ module.exports = async (req, res) => {
             console.timeEnd("API Call: Fusion");
         
         } else {
+            console.timeEnd("Total Request Time"); // 타이머 종료
             return res.status(400).json({ error: 'Invalid stage provided.' });
         }
         
@@ -148,7 +156,7 @@ module.exports = async (req, res) => {
 
     } catch (error) {
         console.error('AI 분석 중 오류:', error);
-        console.timeEnd("Total Request Time");
+        console.timeEnd("Total Request Time"); // 에러 발생 시에도 타이머 종료
         res.status(500).json({ error: error.message || 'AI 모델을 호출하는 데 실패했습니다.' });
     }
 };
