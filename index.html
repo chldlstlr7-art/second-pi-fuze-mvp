@@ -84,6 +84,31 @@
         .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 20px; }
         .gauge-container { text-align: center; }
         
+        /* New Arc Gauge Styling */
+        .arc-gauge-svg {
+            transform: rotate(-90deg); /* Start from top-left */
+            overflow: visible; /* Ensure stroke-linecap 'round' is visible */
+        }
+        .arc-gauge-bg {
+            stroke: #EAECEF;
+            stroke-width: 20;
+            fill: none;
+        }
+        .arc-gauge-progress {
+            stroke-width: 20;
+            fill: none;
+            stroke-linecap: round; /* Rounded ends for the progress arc */
+            transition: stroke-dashoffset 0.8s ease-out; /* Smooth animation */
+            stroke: url(#gaugeGradient);
+        }
+        .arc-gauge-text {
+            transform: rotate(90deg); /* Rotate text back to normal */
+            font-size: 28px; /* Slightly larger for readability */
+            font-weight: bold;
+            fill: var(--text-dark);
+        }
+
+
         .comparison-card { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
         .comparison-card h4 { margin-top: 0; color: var(--primary-color); font-size: 1.2em;}
         
@@ -135,7 +160,6 @@
             <div class="step" id="step-3"><div class="dot"></div>융합 아이디어</div>
         </div>
 
-        <!-- STAGE 1: Initial Idea Input -->
         <div id="stage-input" class="card">
             <h2>아이디어 입력</h2>
             <p>분석하고 싶은 아이디어나 리포트 초안의 핵심 내용을 입력해주세요.</p>
@@ -143,9 +167,6 @@
             <button id="btn-start-analysis">분석 시작</button>
         </div>
 
-        <!-- The following stages will be revealed as the user progresses -->
-        
-        <!-- STAGE 2: Analysis Report -->
         <div id="stage-analysis" class="card hidden">
             <h2>1. 독창성 진단 리포트</h2>
             
@@ -157,8 +178,14 @@
             <div class="analysis-grid">
                 <div class="gauge-container">
                     <h3>구조적 독창성</h3>
-                    <svg width="200" height="120" viewBox="0 0 200 120">
-                        <defs><linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#D0021B"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#50E3C2"/></linearGradient></defs><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" /><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#gaugeGradient)" stroke-width="20" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" id="gauge-arc"/><text x="100" y="95" text-anchor="middle" font-size="24" font-weight="bold" fill="#333" id="gauge-text">0%</text><line x1="100" y1="100" x2="100" y2="20" stroke="#333" stroke-width="4" id="gauge-needle" transform="rotate(-90 100 100)" style="transform-origin: center; transition: transform 0.5s ease-in-out;" />
+                    <svg width="200" height="120" viewBox="0 0 200 120" class="arc-gauge-svg">
+                        <defs>
+                            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#ef4444"/> <stop offset="50%" stop-color="#fcd34d"/> <stop offset="100%" stop-color="#22c55e"/> </linearGradient>
+                        </defs>
+                        <path d="M 20 100 A 80 80 0 0 1 180 100" class="arc-gauge-bg" />
+                        <path d="M 20 100 A 80 80 0 0 1 180 100" class="arc-gauge-progress" id="gauge-arc"/>
+                        <text x="100" y="70" text-anchor="middle" class="arc-gauge-text" id="gauge-text">0%</text>
                     </svg>
                 </div>
                 <div class="criteria-container">
@@ -194,7 +221,6 @@
             </div>
         </div>
 
-        <!-- STAGE 3: Question & Answer -->
         <div id="stage-questions" class="card hidden">
             <h2>2. 창의적 도발 질문</h2>
             <p>AI가 제안한 아래 질문들에 답변하며 아이디어를 확장시켜 보세요.</p>
@@ -202,7 +228,6 @@
             <button id="btn-submit-answers">답변 제출 및 융합 아이디어 생성</button>
         </div>
 
-        <!-- STAGE 4: Fusion Result -->
         <div id="stage-fusion" class="card hidden">
             <h2>3. 최종 융합 아이디어 제안</h2>
             <div class="fusion-summary">
@@ -231,7 +256,6 @@
             <button id="btn-restart">새로운 아이디어 분석하기</button>
         </div>
         
-        <!-- Loading Spinner (moves to the bottom) -->
         <div id="loading-spinner" class="spinner hidden"></div>
     </div>
 
@@ -336,7 +360,7 @@ async function callApi(body) {
         if (error.name === 'AbortError') {
              alert('오류: AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요. (Timeout)');
         } else {
-             alert(`오류가 발생했습니다: ${error.message}`);
+            alert(`오류가 발생했습니다: ${error.message}`);
         }
         location.reload();
     } finally {
@@ -361,32 +385,56 @@ async function handleAnalysisRequest() {
 }
 
 function renderAnalysisReport(data) {
-    const { originalityScore, overallAssessment, judgmentCriteria, comparisonAnalysis } = data;
-    
-    // Render Gauge
-    const gaugeNeedle = document.getElementById('gauge-needle');
+    // 백엔드에서 `plagiarismScore`라는 이름으로 오기 때문에 이 변수명에 맞춰 수정합니다.
+    const originalityScore = 100 - data.plagiarismScore; // 독창성 점수로 변환 (100 - 표절 점수)
+    const overallAssessment = data.plagiarismReason; // 백엔드 응답 구조에 맞춤
+
+    const { archetype } = data; // 백엔드 응답 구조에 맞춤
+
+    // Render Gauge (Arc)
+    const gaugeArc = document.getElementById('gauge-arc');
     const gaugeText = document.getElementById('gauge-text');
-    const angle = -90 + (originalityScore / 100) * 180;
-    gaugeNeedle.setAttribute('transform', `rotate(${angle} 100 100)`);
+    const radius = 80; // Should match SVG path radius
+    const circumference = Math.PI * radius; // Half circumference for a semi-circle
+
+    // Total length of the arc (full semicircle)
+    // The path 'M 20 100 A 80 80 0 0 1 180 100' has a length of PI * radius (approx 251.32)
+    const arcLength = circumference; 
+    
+    // Calculate how much of the arc should be filled
+    const offset = arcLength - (originalityScore / 100) * arcLength;
+
+    gaugeArc.setAttribute('stroke-dasharray', arcLength);
+    gaugeArc.setAttribute('stroke-dashoffset', offset);
     gaugeText.textContent = `${originalityScore}%`;
+
 
     // Render Texts
     document.getElementById('overall-assessment').textContent = overallAssessment;
     
-    // Render Criteria
+    // Render Criteria - Note: `judgmentCriteria` is not in the provided backend JSON structure.
+    // Assuming you might add it or use `plagiarismReason` for general assessment.
+    // For now, it will remain empty or needs adjustment based on actual backend `data` structure.
     const criteriaList = document.getElementById('criteria-list');
     criteriaList.innerHTML = '';
-    judgmentCriteria.forEach(item => {
+    // if (data.judgmentCriteria && Array.isArray(data.judgmentCriteria)) { // If you add judgmentCriteria to backend
+    //     data.judgmentCriteria.forEach(item => {
+    //         const li = document.createElement('li');
+    //         li.textContent = item;
+    //         criteriaList.appendChild(li);
+    //     });
+    // } else {
         const li = document.createElement('li');
-        li.textContent = item;
+        li.textContent = data.plagiarismReason; // Fallback or general assessment
         criteriaList.appendChild(li);
-    });
+    // }
 
     // Render Comparison
-    document.getElementById('comparison-name').textContent = comparisonAnalysis.existingExampleName;
-    document.getElementById('comparison-desc').textContent = comparisonAnalysis.existingExampleDesc;
-    document.getElementById('points-similarity').textContent = comparisonAnalysis.pointsOfSimilarity;
-    document.getElementById('points-difference').textContent = comparisonAnalysis.pointsOfDifference;
+    // Backend has 'archetype' with 'name', 'description', 'comparison'
+    document.getElementById('comparison-name').textContent = archetype.name; // Use archetype.name
+    document.getElementById('comparison-desc').textContent = archetype.description; // Use archetype.description
+    document.getElementById('points-similarity').textContent = archetype.comparison; // Use archetype.comparison for similarity
+    document.getElementById('points-difference').textContent = "제시된 아이디어의 독창적인 강점을 찾아보세요."; // Placeholder, as backend does not provide this explicitly
 }
 
 
@@ -472,4 +520,3 @@ updateProgressBar('input');
 </script>
 </body>
 </html>
-
