@@ -20,39 +20,48 @@ const model_1 = genAI_1.getGenerativeModel({ model: "gemini-2.5-flash" });
 const model_2 = genAI_2.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 
-// --- 프롬프트 엔지니어링 (역할 분리) ---
+// --- 프롬프트 엔지니어링 (업무 재분배) ---
 
-// [작업 1] 창의성 분석 및 질문 생성용 프롬프트
-const promptForAnalysisAndQuestions = `
-You are an expert AI consultant. First, classify the user's text into 'idea', 'essay', or 'reflection'.
-Then, provide an originality analysis and probing questions based on that type.
+// [작업 1] 개념/구조 분석 프롬프트
+const promptForConceptualAnalysis = `
+You are an expert AI consultant. Your task is to perform a conceptual and structural analysis of the user's text.
+First, classify the text into 'idea', 'essay', or 'reflection'.
+Then, provide an originality analysis, probing questions, and a structural plagiarism check based on that type.
 Be extremely fast and concise. Output JSON in Korean.
-**JSON OUTPUT RULES:** Respond with a VALID JSON object without any markdown wrappers.
+
+**Rules:**
+- For structural plagiarism, use internal knowledge, NOT web search.
+- Do NOT flag generic formats (e.g., 'compare/contrast essay').
+- Respond with a VALID JSON object without any markdown wrappers.
+
 **JSON STRUCTURE:**
 {
   "documentType": "<'아이디어/기획안', '논설문/에세이', or '소감문/리뷰'>",
-  "logicalOriginalityScore": <Number 0-100>,
+  "logicalOriginalityScore": <Number 0-100 for structural originality>,
   "coreSummary": ["<1st key logic/sentence>", "<2nd key logic/sentence>", "<3rd key logic/sentence>"],
   "judgmentCriteria": ["<Criterion 1>", "<Criterion 2>", "<Criterion 3>"],
+  "structuralPlagiarism": [{ "sourceLogic": "<...>", "pointOfSimilarity": "<...>", "similarityLevel": "<...>", "sourceLink": "" }],
   "questions": ["<...>", "<...>", "<...>"]
 }
 `;
 
-// [작업 2] 표절 검사 전용 프롬프트
-const promptForPlagiarismReport = `
-You are a plagiarism detection specialist. Analyze the user's text for direct and structural plagiarism.
+// [작업 2] 텍스트 표절 분석 프롬프트
+const promptForTextualAnalysis = `
+You are a plagiarism detection specialist. Analyze the user's text for textual similarities.
 Be extremely fast and concise. Output JSON in Korean.
-**Plagiarism Rules:** Differentiate 'plagiarismSuspicion' from 'properCitation'. Do NOT flag generic formats. Use internal knowledge for sources, NOT web search (set sourceLink to ""). Report all suspicions with similarityScore >= 80%.
-**JSON OUTPUT RULES:** Respond with a VALID JSON object without any markdown wrappers.
+
+**Rules:**
+- Differentiate 'plagiarismSuspicion' (no attribution) from 'properCitation' (has quotes/source).
+- Identify 'commonKnowledge' phrases.
+- Report all 'plagiarismSuspicion' instances with a similarityScore >= 80%.
+- Respond with a VALID JSON object without any markdown wrappers.
+
 **JSON STRUCTURE:**
 {
   "textPlagiarismScore": <Number 0-100 for textual plagiarism risk>,
-  "plagiarismReport": {
-    "plagiarismSuspicion": [{ "similarSentence": "<...>", "source": "<...>", "similarityScore": <...> }],
-    "properCitation": [{ "citedSentence": "<...>", "source": "<...>" }],
-    "commonKnowledge": ["<list of common knowledge phrases found>"],
-    "structuralPlagiarism": [{ "sourceLogic": "<...>", "pointOfSimilarity": "<...>", "similarityLevel": "<...>", "sourceLink": "" }]
-  }
+  "plagiarismSuspicion": [{ "similarSentence": "<...>", "source": "<...>", "similarityScore": <...> }],
+  "properCitation": [{ "citedSentence": "<...>", "source": "<...>" }],
+  "commonKnowledge": ["<list of common knowledge phrases found>"]
 }
 `;
 
@@ -86,7 +95,7 @@ function safeJsonParse(text) {
     } catch (e) {
         console.error("JSON Parsing Error:", e.message);
         console.error("Original AI Response causing error:", text);
-        return null; // Return null on parsing failure
+        return null;
     }
 }
 
@@ -112,49 +121,58 @@ module.exports = async (req, res) => {
 
             console.time("Parallel API Calls");
 
-            // 두 개의 작업을 독립적인 함수로 정의
-            const runCreativityAnalysis = async () => {
-                console.time("Creativity Task");
-                const result = await model_1.generateContent(`${promptForAnalysisAndQuestions}\n\n[User's Text]:\n${idea}`);
-                console.timeEnd("Creativity Task");
+            const runConceptualAnalysis = async () => {
+                console.time("Conceptual Task");
+                const result = await model_1.generateContent(`${promptForConceptualAnalysis}\n\n[User's Text]:\n${idea}`);
+                console.timeEnd("Conceptual Task");
                 return result.response.text();
             };
 
-            const runPlagiarismAnalysis = async () => {
-                console.time("Plagiarism Task");
-                const result = await model_2.generateContent(`${promptForPlagiarismReport}\n\n[User's Text]:\n${idea}`);
-                console.timeEnd("Plagiarism Task");
+            const runTextualAnalysis = async () => {
+                console.time("Textual Task");
+                const result = await model_2.generateContent(`${promptForTextualAnalysis}\n\n[User's Text]:\n${idea}`);
+                console.timeEnd("Textual Task");
                 return result.response.text();
             };
 
-            // Promise.allSettled를 사용하여 두 작업이 모두 완료될 때까지 기다림 (성공/실패 무관)
             const results = await Promise.allSettled([
-                runCreativityAnalysis(),
-                runPlagiarismAnalysis()
+                runConceptualAnalysis(),
+                runTextualAnalysis()
             ]);
             
             console.timeEnd("Parallel API Calls");
 
-            const analysisResult = results[0];
-            const plagiarismResult = results[1];
+            const conceptualResult = results[0];
+            const textualResult = results[1];
 
-            // 두 작업 모두 성공했는지 확인
-            if (analysisResult.status === 'rejected' || plagiarismResult.status === 'rejected') {
-                console.error("Analysis Task Error:", analysisResult.reason);
-                console.error("Plagiarism Task Error:", plagiarismResult.reason);
+            if (conceptualResult.status === 'rejected' || textualResult.status === 'rejected') {
+                console.error("Conceptual Task Error:", conceptualResult.reason);
+                console.error("Textual Task Error:", textualResult.reason);
                 throw new Error("AI 분석 작업 중 하나 이상이 실패했습니다.");
             }
             
-            // 각 결과를 안전하게 파싱
-            const analysisJson = safeJsonParse(analysisResult.value);
-            const plagiarismJson = safeJsonParse(plagiarismResult.value);
+            const conceptualJson = safeJsonParse(conceptualResult.value);
+            const textualJson = safeJsonParse(textualResult.value);
 
-            if (!analysisJson || !plagiarismJson) {
+            if (!conceptualJson || !textualJson) {
                 throw new Error("AI 응답을 JSON으로 변환하는 데 실패했습니다.");
             }
             
-            // 두 결과를 하나의 객체로 병합
-            finalResultJson = { ...analysisJson, ...plagiarismJson };
+            // 두 결과를 하나의 최종 JSON 객체로 병합
+            finalResultJson = {
+                documentType: conceptualJson.documentType,
+                logicalOriginalityScore: conceptualJson.logicalOriginalityScore,
+                coreSummary: conceptualJson.coreSummary,
+                judgmentCriteria: conceptualJson.judgmentCriteria,
+                questions: conceptualJson.questions,
+                textPlagiarismScore: textualJson.textPlagiarismScore,
+                plagiarismReport: {
+                    plagiarismSuspicion: textualJson.plagiarismSuspicion,
+                    properCitation: textualJson.properCitation,
+                    commonKnowledge: textualJson.commonKnowledge,
+                    structuralPlagiarism: conceptualJson.structuralPlagiarism,
+                }
+            };
             
         } else if (stage === 'fuse') {
             if (!originalIdea || !answers) {
