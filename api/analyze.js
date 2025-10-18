@@ -4,7 +4,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // 2. Vercel에 저장된 'GEMINI_API_KEY' 가져오기
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// 3. AI 모델 설정
+// 3. AI 모델 설정 (사용자가 요청한 2.5 버전으로 수정)
 const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
 });
