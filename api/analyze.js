@@ -4,41 +4,66 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // 2. Vercel에 저장된 'GEMINI_API_KEY' 가져오기
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// 3. AI 모델 설정 (님이 찾아낸 그 모델!)
-// (주의: systemInstruction은 이 모델에서 지원하지 않을 수 있으니, 프롬프트에 직접 포함합니다.)
+// 3. AI 모델 설정
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash", 
+    model: "gemini-1.5-flash-latest", 
 });
 
-// --- 프롬프트 엔지니어링 ---
+// --- 프롬프트 엔지니어링 (JSON 출력 강화) ---
 
-// [1단계] 최초 아이디어 분석 및 질문 생성용 프롬프트
+// [1단계] 분석 및 질문 생성용 프롬프트
 const promptForStep1 = `
-당신은 서울대학교의 지능형 교육 조교(AI-TA) 'PI-Fuze'입니다.
-학생의 아이디어를 분석하고, 다음 3가지 항목을 **순서대로** 명확하게 제시해주세요.
+You are an expert AI analyst for PI-Fuze. Your task is to analyze a user's idea and return a response ONLY in a valid JSON format. Do not include any text before or after the JSON object.
 
-1.  **[표절 위험도 진단]**
-    * 제출된 아이디어의 핵심 개념을 분석하고, 일반적인 아이디어 대비 표절 위험도(구조적 복제 포함)를 '높음', '중간', '낮음'으로 평가하고 그 이유를 1-2줄로 설명합니다.
+The user's idea is:
+---
+{{IDEA}}
+---
 
-2.  **[구조적 복제의 원인]**
-    * 만약 독창성이 부족하다면, 그 원인을 '관점 협소', '기존 가정 고정' 등 1-2가지 키워드로 지적합니다. (독창적이라면 '매우 독창적인 접근'이라고 칭찬합니다.)
-
-3.  **[창의적 사고 도발 질문 (3가지)]**
-    * 아이디어를 더 깊고 넓게 확장시키기 위한 '창의적 도발 질문' 3가지를 제시합니다.
-    * 이 질문은 학생이 자신의 아이디어에 대해 다른 관점을 갖도록 유도해야 합니다.
-    * 질문 후, "이 질문들에 대해 답변해주시면 다음 단계로 아이디어를 융합시켜 드립니다."라고 마무리 멘트를 추가해주세요.
+Analyze this idea and generate a JSON object with the following structure:
+{
+  "plagiarismScore": <A number between 0 and 100 representing the risk of structural plagiarism. Higher means more common.>,
+  "plagiarismReason": "<A brief, one-sentence explanation for the score. e.g., '매우 보편적인 시장 진입 전략입니다.'>",
+  "archetype": {
+    "name": "<The name of the closest idea archetype. e.g., '소셜 네트워크 기반 마켓플레이스'>",
+    "description": "<A one-sentence description of this archetype.>",
+    "comparison": "<A common, real-world example of this archetype. e.g., '당근마켓, 중고나라와 같이 사용자를 먼저 모으고 거래 기능을 붙이는 방식'>"
+  },
+  "questions": [
+    "<A thought-provoking question to challenge the user's core assumption.>",
+    "<A second question to inspire a creative fusion with another field.>",
+    "<A third question to make the user think about a niche target audience.>"
+  ]
+}
 `;
 
-// [2단계] 답변을 받아 최종 융합 아이디어 생성용 프롬프트
+// [2단계] 최종 융합 아이디어 생성용 프롬프트
 const promptForStep2 = `
-당신은 최고의 창의적 융합 전문가입니다.
-학생의 [최초 아이디어]와 그 아이디어를 발전시키기 위한 [학생의 답변]을 받았습니다.
+You are an expert creative strategist for PI-Fuze. Your task is to synthesize a final, fused idea based on the user's original idea and their answers to your questions. Return a response ONLY in a valid JSON format. Do not include any text before or after the JSON object.
 
-당신의 임무는 이 두 가지 정보를 **적극적으로 융합**하여, 매우 구체적이고, 독창적이며, 실행 가능한 **'최종 융합 아이디어'** 1가지를 제안하는 것입니다.
+The user's original idea was:
+---
+{{ORIGINAL_IDEA}}
+---
 
-* 학생의 답변을 반드시 반영하여 아이디어를 발전시켜야 합니다.
-* "다음은 융합 아이디어 제안입니다."라는 제목으로 시작해주세요.
-* 아이디어 이름, 핵심 타겟, 주요 기능, 그리고 왜 이것이 독창적인지에 대해 구체적으로 설명해주세요.
+The user's answers to the provocative questions are:
+---
+1. {{ANSWER_1}}
+2. {{ANSWER_2}}
+3. {{ANSWER_3}}
+---
+
+Synthesize this information and generate a JSON object with the following structure:
+{
+  "fusionTitle": "<A catchy, new name for the fused idea.>",
+  "fusionSummary": "<A compelling one-paragraph summary of the new idea.>",
+  "connection": "<A brief explanation of how the user's answers were specifically used to evolve the original idea into this new concept.>",
+  "keyFeatures": [
+    "<The first key feature of the new idea.>",
+    "<The second key feature, directly reflecting the fusion.>",
+    "<The third key feature, highlighting its uniqueness.>"
+  ]
+}
 `;
 
 
@@ -49,42 +74,37 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // 프론트엔드에서 보낸 JSON 본문 파싱
-        const { idea, originalIdea, answers } = req.body;
+        const { stage, idea, originalIdea, answers } = req.body;
+        let finalPrompt = "";
 
-        let fullPrompt = "";
-        
-        // [1단계 요청] 최초 아이디어가 들어온 경우
-        if (idea) {
-            fullPrompt = `${promptForStep1}\n\n[학생의 최초 아이디어]:\n${idea}`;
-        } 
-        // [2단계 요청] 최초 아이디어와 답변이 함께 들어온 경우
-        else if (originalIdea && answers) {
-            fullPrompt = `${promptForStep2}\n\n[최초 아이디어]:\n${originalIdea}\n\n[학생의 답변]:\n${answers}`;
-        } 
-        // 잘못된 요청
-        else {
-            return res.status(400).json({ error: '잘못된 요청입니다. \'idea\' 또는 \'originalIdea\'와 \'answers\'가 필요합니다.' });
+        if (stage === 'analyze') {
+            finalPrompt = promptForStep1.replace('{{IDEA}}', idea);
+        } else if (stage === 'fuse') {
+            finalPrompt = promptForStep2
+                .replace('{{ORIGINAL_IDEA}}', originalIdea)
+                .replace('{{ANSWER_1}}', answers[0])
+                .replace('{{ANSWER_2}}', answers[1])
+                .replace('{{ANSWER_3}}', answers[2]);
+        } else {
+            return res.status(400).json({ error: 'Invalid stage provided.' });
         }
 
-        // AI 모델 호출
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        const analysisResult = response.text();
-
-        // 결과를 프론트엔드로 전송
-        res.status(200).json({ analysis: analysisResult });
+        const result = await model.generateContent(finalPrompt);
+        const responseText = result.response.text();
+        
+        // AI 응답이 유효한 JSON인지 확인하기 위한 파싱
+        try {
+            const jsonResponse = JSON.parse(responseText);
+            res.status(200).json(jsonResponse);
+        } catch (e) {
+            console.error("JSON Parsing Error:", e);
+            console.error("Original AI Response:", responseText);
+            res.status(500).json({ error: "AI가 유효한 형식의 응답을 생성하지 못했습니다." });
+        }
 
     } catch (error) {
         console.error('AI 분석 중 오류:', error);
-        let errorMessage = 'AI 모델을 호출하는 데 실패했습니다.';
-        if (error.message && error.message.includes('404')) {
-            errorMessage = '모델을 찾을 수 없습니다. (404)';
-        } else if (error.message && error.message.includes('429')) {
-            errorMessage = '무료 할당량을 초과했습니다. (429)';
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-        res.status(500).json({ error: errorMessage });
+        res.status(500).json({ error: 'AI 모델을 호출하는 데 실패했습니다.' });
     }
 };
+
