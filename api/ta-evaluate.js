@@ -9,11 +9,18 @@ const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash", 
 });
 
-// --- 프롬프트 엔지니어링 (평가+점수 전용) ---
+// --- 프롬프트 엔지니어링 (평가+점수 전용 - '엄격한' 채점 기준) ---
 const promptForEvaluation = `
-You are an expert academic Teaching Assistant (TA).
+You are an expert academic Teaching Assistant (TA) and a *strict grader (엄격한 채점관)*.
 Your task is to evaluate the following student report and provide a quantitative score.
-Base the score on the report's logical flow, argument clarity, completeness, and originality.
+
+**Scoring Standard (Important - Stricter):**
+You must grade *strictly*. The default score is not 100.
+- An average, decent report should score around 70-75.
+- Only exceptional reports that are nearly flawless in logic, clarity, and originality should score above 90.
+- Be critical and deduct points for any weaknesses in logical flow, argument clarity, completeness, or originality.
+- As a reference: A report you might have previously given a 92 should now be scored closer to an 80.
+
 Respond in Korean.
 
 **JSON OUTPUT RULES:**
@@ -22,7 +29,7 @@ Respond in Korean.
 
 **JSON STRUCTURE:**
 {
-  "overallScore": <Number from 0-100. Base this score on logical flow, clarity, and originality.>,
+  "overallScore": <Number from 0-100. Apply the *strict* scoring standard defined above.>,
   "originalityDraft": "<A *brief* (1-2 sentences) assessment of the report's originality.>"
 }
 `;
