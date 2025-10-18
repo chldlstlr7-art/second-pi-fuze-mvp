@@ -9,30 +9,37 @@ const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash", 
 });
 
-// --- 프롬프트 엔지니어링 (유사성 검사 - '엄격한' 기준) ---
+// --- 프롬프트 엔지니어링 (유사성 검사 - 2가지 유형 분리) ---
 const promptForSimilarity = `
 You are an expert academic Teaching Assistant (TA).
-Your task is *only* to perform a strict similarity check on the following student report.
+Your task is *only* to perform a similarity check on the following student report.
+You must categorize findings into *two distinct types*: 'paraphrasingPlagiarism' and 'copyPastePlagiarism'.
 
-**Similarity Analysis Rules (Important - Be 'Strict'):**
-For the 'similarPhrases' section, adopt a *very strict (깐깐한)* standard. 
-Focus *only* on high-confidence matches that strongly suggest a lack of originality. This includes:
-1.  Direct word-for-word plagiarism (문자 그대로 복사-붙여넣기).
-2.  Sentences that are only minimally changed (e.g., only a few words swapped or reordered).
-*Do NOT* flag common knowledge, standard definitions (unless copied verbatim without quotes), or properly paraphrased arguments.
+**Analysis Types:**
+1.  **Paraphrasing Plagiarism (의역 표절):** This is about *conceptual theft*. The student steals the core idea, logical structure, or unique concept from a source, even if they used different words. (단순히 단어를 바꾸는 수준을 넘어 원문의 아이디어와 개념을 도용하는 행위).
+2.  **Copy/Paste Plagiarism (단순 복제 표절):** This is about *textual theft*. The student copies text word-for-word (verbatim) or with only minimal changes (e.g., swapping a few words).
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
 - Do not include markdown \`\`\`json or any text outside the JSON structure.
+- Populate both arrays. If no instances of a type are found, return an empty array [] for that key.
 
 **JSON STRUCTURE:**
 {
-  "similarPhrases": [
+  "paraphrasingPlagiarism": [
     {
-      "phrase": "<The specific phrase from the student's report that meets the 'Strict' criteria.>",
-      "likelySource": "<Name of the specific source (e.g., '위키피디아 [토픽] 항목', '특정 논문 제목').>",
-      "sourceURL": "<CRITICAL: *You must attempt to provide a direct URL* to the 'likelySource'. If you identified a specific public source, provide its full URL. If a specific URL cannot be recalled, state 'N/A'.>",
-      "similarityType": "<Explain *how* it's similar based on the 'Strict' rules (e.g., '특정 소스의 문장과 단어 몇 개만 다르고 동일함', '출처 표기 없이 원문을 그대로 복사함').>"
+      "phrase": "<The student's phrase that conceptually copies an idea.>",
+      "likelySource": "<Name of the original source/idea.>",
+      "sourceURL": "<A *possible* URL to the source. State 'N/A' if unknown.>",
+      "similarityType": "<Explain *how* it's conceptual theft (e.g., '원본의 핵심 논리 구조를 그대로 차용함').>"
+    }
+  ],
+  "copyPastePlagiarism": [
+    {
+      "phrase": "<The student's phrase that is a direct copy or minimally changed.>",
+      "likelySource": "<Name of the specific source.>",
+      "sourceURL": "<A *possible* URL to the source. State 'N/A' if unknown.>",
+      "similarityType": "<Explain *how* it's textual theft (e.g., '출처 표기 없이 원문을 그대로 복사함').>"
     }
   ]
 }
@@ -59,7 +66,7 @@ module.exports = async (req, res) => {
         let analysisResultText = response.text();
 
         // 견고한 JSON 파싱
-        const jsonMatch = analysisResultText.match(/```json\s*([\s\S]*?)\s*```/);
+        const jsonMatch = analysisResultText.match(/```json\s*([\sS]*?)\s*```/);
         if (jsonMatch && jsonMatch[1]) {
             analysisResultText = jsonMatch[1];
         } else {
