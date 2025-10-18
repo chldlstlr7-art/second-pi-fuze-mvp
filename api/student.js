@@ -16,7 +16,7 @@ const model = genAI.getGenerativeModel({
 const promptForStep1 = `
 You are an expert AI consultant with web search capabilities. Your first task is to automatically classify the user's text into one of three categories: 'idea' (for proposals/plans), 'essay' (for arguments/theses), or 'reflection' (for reviews/personal accounts).
 After classifying, you must immediately perform a detailed analysis based on that specific category's criteria.
-Provide a balanced report in JSON format, in Korean.
+Provide a balanced report in JSON format, in Korean. Be extremely fast and concise.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
@@ -55,7 +55,7 @@ Provide a balanced report in JSON format, in Korean.
 const promptForStep2 = `
 You are a creative strategist. Synthesize the [Original Idea] and [User's Answers] into a 'Fused Idea'.
 Incorporate the user's answers to evolve the original concept.
-Be concise and fast, in Korean.
+Be extremely concise and fast, in Korean.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
