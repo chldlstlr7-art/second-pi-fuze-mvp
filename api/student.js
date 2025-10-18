@@ -14,13 +14,14 @@ const model = genAI.getGenerativeModel({
 
 // [1단계] 자동 분류 및 분석용 프롬프트
 const promptForStep1 = `
-You are an expert AI consultant. Your first task is to automatically classify the user's text into one of three categories: 'idea' (for proposals/plans), 'essay' (for arguments/theses), or 'reflection' (for reviews/personal accounts).
+You are an expert AI consultant with web search capabilities. Your first task is to automatically classify the user's text into one of three categories: 'idea' (for proposals/plans), 'essay' (for arguments/theses), or 'reflection' (for reviews/personal accounts).
 After classifying, you must immediately perform a detailed analysis based on that specific category's criteria.
 Provide a balanced report in JSON format, in Korean.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
 - Do not include markdown \`\`\`json or any text outside the JSON structure.
+- For the 'structuralPlagiarism' part, use your search capabilities to find a real source and provide a valid URL.
 
 **JSON STRUCTURE:**
 {
@@ -34,7 +35,12 @@ Provide a balanced report in JSON format, in Korean.
   ],
   "plagiarismReport": {
     "directPlagiarism": [{ "similarSentence": "<found sentence>", "source": "<estimated source>", "similarityScore": <number> }],
-    "structuralPlagiarism": [{ "sourceLogic": "<name of similar logic/model>", "pointOfSimilarity": "<explanation>" }]
+    "structuralPlagiarism": [{ 
+      "sourceLogic": "<name of similar logic/model>", 
+      "pointOfSimilarity": "<explanation>",
+      "similarityLevel": "<One of: '매우 낮음', '낮음', '보통', '주의', '높음', '매우 높음'>",
+      "sourceLink": "<A valid URL to the source found via search. If none, provide an empty string ''.>"
+    }]
   },
   "questions": [
     "<A question relevant to the doc type>",
@@ -126,6 +132,4 @@ module.exports = async (req, res) => {
         res.status(500).json({ error: error.message || 'AI 모델을 호출하는 데 실패했습니다.' });
     }
 };
-
-
 
