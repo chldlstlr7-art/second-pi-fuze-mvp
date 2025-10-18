@@ -377,7 +377,7 @@ async function callApi(body) {
 
     try {
         // 백엔드 코드가 Vercel의 /api/ 폴더에 배포되었다고 가정
-        const response = await fetch('/api/analyze', { 
+        const response = await fetch('/api/student', { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
