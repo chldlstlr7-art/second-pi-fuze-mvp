@@ -6,14 +6,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 3. AI 모델 설정
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash", 
+    model: "gemini-2.5-flash",
 });
 
 // --- 프롬프트 엔지니어링 (JSON 출력 강화) ---
-
 // [1단계] 분석 및 질문 생성용 프롬프트
 const promptForStep1 = `
-You are an expert AI analyst for PI-Fuze. Your task is to analyze a user's idea and return a response ONLY in a valid JSON format. Do not include any text before or after the JSON object.
+You are an expert AI analyst for PI-Fuze. Your task is to analyze a user's idea and return a response ONLY in a valid JSON format. Do not include any text, explanations, or markdown fences like \`\`\`json before or after the JSON object. Just the raw JSON.
 
 The user's idea is:
 ---
@@ -39,7 +38,7 @@ Analyze this idea and generate a JSON object with the following structure:
 
 // [2단계] 최종 융합 아이디어 생성용 프롬프트
 const promptForStep2 = `
-You are an expert creative strategist for PI-Fuze. Your task is to synthesize a final, fused idea based on the user's original idea and their answers to your questions. Return a response ONLY in a valid JSON format. Do not include any text before or after the JSON object.
+You are an expert creative strategist for PI-Fuze. Your task is to synthesize a final, fused idea based on the user's original idea and their answers to your questions. Return a response ONLY in a valid JSON format. Do not include any text, explanations, or markdown fences like \`\`\`json before or after the JSON object. Just the raw JSON.
 
 The user's original idea was:
 ---
@@ -66,7 +65,6 @@ Synthesize this information and generate a JSON object with the following struct
 }
 `;
 
-
 // 4. Vercel 서버리스 함수 (핵심 로직)
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
@@ -92,13 +90,16 @@ module.exports = async (req, res) => {
         const result = await model.generateContent(finalPrompt);
         const responseText = result.response.text();
         
-        // AI 응답이 유효한 JSON인지 확인하기 위한 파싱
+        // ★★★★★ 수정된 핵심 부분 ★★★★★
+        // AI 응답에서 Markdown 코드 블록을 제거하는 로직
         try {
-            const jsonResponse = JSON.parse(responseText);
+            // 정규표현식을 사용해 ```json 과 ``` 를 제거
+            const cleanedText = responseText.replace(/```json\s*|```/g, '').trim();
+            const jsonResponse = JSON.parse(cleanedText);
             res.status(200).json(jsonResponse);
         } catch (e) {
             console.error("JSON Parsing Error:", e);
-            console.error("Original AI Response:", responseText);
+            console.error("Original AI Response:", responseText); // 원본 응답도 로그로 남김
             res.status(500).json({ error: "AI가 유효한 형식의 응답을 생성하지 못했습니다." });
         }
 
