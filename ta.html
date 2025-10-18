@@ -42,7 +42,7 @@
         }
         .hidden { display: none !important; }
         
-        /* --- START: 파일 업로드 스타일 (수정됨) --- */
+        /* 파일 업로드 스타일 (변경 없음) */
         #drop-zone {
             border: 2px dashed var(--border-color);
             border-radius: 8px;
@@ -58,9 +58,8 @@
             border-color: var(--primary-color);
         }
         #file-input {
-            display: none; /* 숨김 처리 */
+            display: none; 
         }
-        /* 파일 목록 리스트 */
         #file-list-container {
             margin-top: 20px;
         }
@@ -90,7 +89,6 @@
             color: #DC2626; /* Red */
             font-weight: bold;
         }
-        /* --- END: 파일 업로드 스타일 --- */
 
         button { 
             display: block; 
@@ -109,23 +107,22 @@
         button:hover { background: #047857; }
         button:disabled { background: #D1D5DB; cursor: not-allowed; }
         
-        .spinner { 
-            width: 40px; 
-            height: 40px; 
-            border: 4px solid rgba(0,0,0,0.1); 
+        /* --- (신규) 작은 스피너 --- */
+        .spinner-small { 
+            width: 20px; 
+            height: 20px; 
+            border: 3px solid rgba(0,0,0,0.1); 
             border-left-color: var(--primary-color); 
             border-radius: 50%; 
             animation: spin 1s linear infinite; 
-            margin: 40px auto; 
+            margin-top: 10px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* 결과물 섹션 */
-        /* (수정) stage-result는 이제 카드 자체가 아니라 컨테이너임 */
+        /* 결과물 섹션 (변경 없음) */
         #stage-result {
             padding-top: 20px;
         }
-        /* (수정) 결과 카드 내의 제목 */
         #stage-result .card h2 {
             font-size: 1.8em;
             color: var(--primary-color);
@@ -151,6 +148,20 @@
             border: 1px solid var(--border-color);
             margin-top: 20px;
         }
+        /* (신규) 스피너를 담을 플레이스홀더 */
+        .report-section-placeholder {
+             padding: 25px;
+             background-color: #F9FAFB;
+             border-radius: 8px; 
+             border: 1px solid var(--border-color);
+             margin-top: 20px;
+        }
+        .report-section-placeholder h3 {
+             border: none;
+             padding: 0;
+             margin: 0;
+        }
+        
         .report-output p, .report-output ul {
             font-size: 1.1em;
             line-height: 1.7;
@@ -229,7 +240,7 @@
                 <ul id="file-list">
                     </ul>
             </div>
-
+            
             <button id="btn-start-assessment">선택된 파일 분석 시작</button>
         </div>
         
@@ -241,26 +252,26 @@
     </div>
 
 <script>
-    // --- (신규) 글로벌 상태 ---
+    // --- 글로벌 상태 ---
     let filesToAnalyze = []; // { name: string, text: string, error?: string }
 
-    // --- (기존) DOM Elements ---
+    // --- DOM Elements ---
     const inputStage = document.getElementById('stage-input');
     const resultStage = document.getElementById('stage-result');
     const btnStart = document.getElementById('btn-start-assessment');
     const btnRestart = document.getElementById('btn-restart');
-    // const spinner = document.getElementById('loading-spinner'); // (수정) 개별 스피너 사용으로 변경
 
-    // --- (신규) 파일 입력 Elements ---
+    // --- 파일 입력 Elements ---
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const fileList = document.getElementById('file-list');
+    
     // PDF.js worker 설정
     if (window.pdfjsLib) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
     }
 
-    // --- (신규) 파일 이벤트 리스너 ---
+    // --- 파일 이벤트 리스너 ---
     dropZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFileSelect);
     
@@ -281,7 +292,7 @@
         }
     });
 
-    // --- (수정) 다중 파일 처리 함수 ---
+    // --- 다중 파일 처리 함수 ---
     async function handleFileSelect() {
         const files = fileInput.files;
         if (!files || files.length === 0) return;
@@ -289,15 +300,10 @@
         filesToAnalyze = []; // 글로벌 목록 초기화
         fileList.innerHTML = `<li><span class="status-text">${files.length}개 파일 읽는 중...</span></li>`;
 
-        // 각 파일에 대해 텍스트 추출 프로미스 생성
         const extractionPromises = Array.from(files).map(processFile);
-        
-        // 모든 파일 처리가 끝날 때까지 대기
         const results = await Promise.all(extractionPromises);
-        
         filesToAnalyze = results; // 글로벌 상태에 저장
         
-        // 파일 목록 UI 업데이트
         fileList.innerHTML = ''; // 목록 비우기
         filesToAnalyze.forEach(file => {
             const li = document.createElement('li');
@@ -312,7 +318,7 @@
         });
     }
 
-    // (신규) 단일 파일 처리 헬퍼 함수
+    // 단일 파일 처리 헬퍼 함수
     async function processFile(file) {
         try {
             let text = '';
@@ -330,7 +336,7 @@
         }
     }
 
-    // (기존) .docx 텍스트 추출
+    // .docx 텍스트 추출
     function extractDocxText(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -345,7 +351,7 @@
         });
     }
 
-    // (기존) .pdf 텍스트 추출
+    // .pdf 텍스트 추출
     async function extractPdfText(file) {
         const reader = new FileReader();
         return new Promise((resolve, reject) => {
@@ -372,18 +378,13 @@
         });
     }
 
-    // --- (기존) 이벤트 리스너 ---
-    btnStart.addEventListener('click', handleAssessmentRequest);
-    btnRestart.addEventListener('click', () => location.reload());
-
-    // --- (수정) API Call Logic (순수 네트워크 함수) ---
-    async function callApi(body) {
-        // (수정) 글로벌 스피너, 버튼 비활성화 제거
+    // --- (신규) 범용 API 호출 함수 ---
+    async function callApiEndpoint(url, body) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2분
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2분 타임아웃
 
         try {
-            const response = await fetch('/api/ta', { 
+            const response = await fetch(url, { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -393,20 +394,24 @@
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                const errData = await response.json().catch(() => ({ error: "An unknown server error occurred." }));
+                const errData = await response.json().catch(() => ({}));
                 throw new Error(errData.error || `서버 오류: ${response.statusText}`);
             }
-            return await response.json(); // 데이터 반환
+            return await response.json(); 
         } catch (error) {
+            clearTimeout(timeoutId); // 다른 에러 발생 시에도 타임아웃 클리어
             if (error.name === 'AbortError') {
-                 throw new Error('AI 응답 시간이 너무 오래 걸립니다. (Timeout)');
+                 throw new Error('AI 응답 시간이 2분을 초과했습니다. (Timeout)');
             }
-            throw error; // 에러를 상위로 전파
+            throw error; 
         }
-        // (수정) finally 블록 제거
     }
 
-    // --- (수정) 다중 파일 분석 요청 핸들러 ---
+    // --- 이벤트 리스너 ---
+    btnStart.addEventListener('click', handleAssessmentRequest);
+    btnRestart.addEventListener('click', () => location.reload());
+
+    // --- (수정) 다중 파일 병렬 분석 요청 핸들러 ---
     async function handleAssessmentRequest() {
         const validFiles = filesToAnalyze.filter(f => !f.error && f.text);
         
@@ -421,49 +426,73 @@
         btnRestart.classList.remove('hidden');
         btnStart.disabled = true;
 
-        // 각 파일에 대해 병렬로 분석 시작
         for (const file of validFiles) {
-            // 1. 즉시 플레이스홀더(로딩 카드) 생성
-            const placeholderId = `result-for-${file.name.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            // 1. 각 파일의 고유 ID 생성
+            const fileId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+            
+            // 2. 즉시 플레이스홀더(로딩 카드) 생성
             const placeholderHtml = `
-                <div id="${placeholderId}" class="card">
-                    <h2>분석 중: ${escapeHTML(file.name)}</h2>
-                    <div class="spinner"></div>
+                <div id="${fileId}" class="card">
+                    <h2>${escapeHTML(file.name)}</h2>
+                    <div id="summary-${fileId}" class="report-section-placeholder">
+                        <h3>핵심 요약</h3><div class="spinner-small"></div>
+                    </div>
+                    <div id="eval-${fileId}" class="report-section-placeholder">
+                        <h3>독창성 평가 (초안)</h3><div class="spinner-small"></div>
+                    </div>
+                    <div id="sim-${fileId}" class="report-section-placeholder">
+                        <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3><div class="spinner-small"></div>
+                    </div>
                 </div>
             `;
             resultStage.insertAdjacentHTML('beforeend', placeholderHtml);
 
-            // 2. 비동기(await 없음)로 API 호출 및 체이닝
-            callApi({ 
-                stage: 'assess_report', 
-                reportText: file.text 
-            })
-            .then(data => {
-                // 3. 성공 시: 플레이스홀더를 실제 결과로 교체
-                const resultHtml = renderAssessmentReport(data); // HTML 문자열 받기
-                const cardElement = document.getElementById(placeholderId);
-                cardElement.innerHTML = `<h2>분석 완료: ${escapeHTML(file.name)}</h2>` + resultHtml;
-            })
-            .catch(error => {
-                // 4. 실패 시: 플레이스홀더를 에러 카드로 교체
-                const cardElement = document.getElementById(placeholderId);
-                cardElement.classList.add('error-card'); // 에러 스타일 적용
-                cardElement.innerHTML = `
-                    <h2>분석 실패: ${escapeHTML(file.name)}</h2>
-                    <p style="color: #DC2626; font-weight: bold;">
-                        오류가 발생했습니다: ${escapeHTML(error.message)}
-                    </p>
-                `;
-            });
+            // 3. 비동기(await 없음)로 3개 API 동시 호출 및 개별 업데이트
+            
+            // 요약 (api/ta-summary.js)
+            callApiEndpoint('/api/ta-summary', { stage: 'summarize', reportText: file.text })
+                .then(data => {
+                    document.getElementById(`summary-${fileId}`).innerHTML = renderSummaryHtml(data);
+                })
+                .catch(error => {
+                    document.getElementById(`summary-${fileId}`).innerHTML = renderErrorHtml("핵심 요약", error.message);
+                });
+
+            // 평가 (api/ta-evaluate.js)
+            callApiEndpoint('/api/ta-evaluate', { stage: 'evaluate', reportText: file.text })
+                .then(data => {
+                    document.getElementById(`eval-${fileId}`).innerHTML = renderEvaluationHtml(data);
+                })
+                .catch(error => {
+                    document.getElementById(`eval-${fileId}`).innerHTML = renderErrorHtml("독창성 평가", error.message);
+                });
+
+            // 유사성 (api/ta-similarity.js)
+            callApiEndpoint('/api/ta-similarity', { stage: 'check_similarity', reportText: file.text })
+                .then(data => {
+                    document.getElementById(`sim-${fileId}`).innerHTML = renderSimilarityHtml(data);
+                })
+                .catch(error => {
+                    document.getElementById(`sim-${fileId}`).innerHTML = renderErrorHtml("유사성 검토", error.message);
+                });
         }
     }
 
-    // --- (수정) HTML 문자열을 반환하는 렌더링 함수 ---
-    function renderAssessmentReport(data) {
-        const { summary, originalityDraft, keyStrengths, areasForImprovement, similarPhrases } = data;
+    // --- (신규) HTML 렌더링 헬퍼 함수 ---
 
-        // 강점 및 개선점 렌더링
+    function renderSummaryHtml(data) {
+        return `
+            <div class="report-output">
+                <h3>핵심 요약</h3>
+                <p>${escapeHTML(data.summary)}</p>
+            </div>
+        `;
+    }
+
+    function renderEvaluationHtml(data) {
+        const { originalityDraft, keyStrengths, areasForImprovement } = data;
         let keyPointsHtml = '';
+
         if (keyStrengths && keyStrengths.length > 0) {
             keyPointsHtml += keyStrengths.map(point => 
                 `<li><strong>[강점]</strong> ${escapeHTML(point)}</li>`
@@ -478,11 +507,23 @@
             keyPointsHtml = '<li>분석된 강점/개선점이 없습니다.</li>';
         }
 
-        // 상세 유사성 카드 렌더링 (URL 포함)
+        return `
+            <div class="report-output">
+                <h3>독창성 평가 (초안)</h3>
+                <p>${escapeHTML(originalityDraft)}</p>
+                <ul id="result-key-points">
+                    ${keyPointsHtml}
+                </ul>
+            </div>
+        `;
+    }
+
+    function renderSimilarityHtml(data) {
+        const { similarPhrases } = data;
         let similarListHtml = '';
+
         if (similarPhrases && similarPhrases.length > 0) {
             similarListHtml = similarPhrases.map(item => {
-                // URL 처리 로직
                 let urlHTML = '';
                 if (item.sourceURL && item.sourceURL.startsWith('http')) {
                     urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceURL)}</a>`;
@@ -505,19 +546,7 @@
             similarListHtml = '<li style="list-style-type: none; color: #6B7280;">엄격한 기준(직접 인용, 최소 변경)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
         }
 
-        // 전체 HTML 문자열 반환
         return `
-            <div class="report-output">
-                <h3>핵심 요약</h3>
-                <p>${escapeHTML(summary)}</p>
-            </div>
-            <div class="report-output">
-                <h3>독창성 평가 (초안)</h3>
-                <p>${escapeHTML(originalityDraft)}</p>
-                <ul id="result-key-points">
-                    ${keyPointsHtml}
-                </ul>
-            </div>
             <div class="report-output" style="background-color: #F9FAFB;">
                 <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3>
                 <ul id="result-similar-phrases">
@@ -526,9 +555,20 @@
             </div>
         `;
     }
+
+    function renderErrorHtml(sectionTitle, errorMessage) {
+        return `
+            <div class="report-output" style="border-color: #FCA5A5; background-color: #FEF2F2;">
+                <h3 style="color: #DC2626;">${escapeHTML(sectionTitle)} (오류)</h3>
+                <p style="color: #B91C1C; font-weight: bold;">
+                    ${escapeHTML(errorMessage)}
+                </p>
+            </div>
+        `;
+    }
     
     /**
-     * XSS(Cross-Site Scripting) 방지를 위한 간단한 HTML 이스케이프 함수
+     * XSS 방지를 위한 간단한 HTML 이스케이프 함수
      */
     function escapeHTML(str) {
         if (!str) return '';
