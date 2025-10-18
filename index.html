@@ -75,10 +75,10 @@
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-left-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 40px auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
-                #gauge-arc {
+                #gauge-arc {
             transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
+        
         /* Analysis Stage Styles */
         h3 { font-size: 1.4em; color: var(--text-dark); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); }
         .analysis-section { margin-bottom: 30px; }
@@ -231,7 +231,7 @@
         </div>
         
                 <div id="loading-spinner" class="spinner hidden"></div>
-    </div>
+  T </div>
 
 <script>
 // --- State Management ---
@@ -308,6 +308,7 @@ function finalizeStage(stageName) {
 
 
 // --- API Call Logic ---
+// [수정] 실제 fetch 대신 시뮬레이션 데이터로 즉시 테스트할 수 있도록 변경
 async function callApi(body) {
     spinner.classList.remove('hidden');
     spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -318,7 +319,8 @@ async function callApi(body) {
 
     if (body.stage === 'analyze') {
         return {
-            originalityScore: Math.floor(Math.random() * 60) + 40, // 40-99
+            // 점수 애니메이션을 보기 위해 40~99 사이의 랜덤 점수 생성
+            originalityScore: Math.floor(Math.random() * 60) + 40, 
             overallAssessment: "입력된 아이디어는 '개인 맞춤형 AI 학습 경로 추천'이라는 핵심 개념을 가지고 있습니다. 이는 이미 시장에 다수 존재하는 적응형 학습(Adaptive Learning) 솔루션과 유사성이 발견됩니다.",
             judgmentCriteria: ["AI 맞춤화", "학습 경로", "데이터 기반", "동기부여 시스템"],
             comparisonAnalysis: {
@@ -346,9 +348,12 @@ async function callApi(body) {
             ]
         };
     }
-    // 참고: 실제 프로덕션에서는 이 'callApi' 함수를 주석 처리된
-    // 'fetch' 로직으로 교체해야 합니다.
-    /*
+}
+/* // 원본 fetch 로직 주석 처리
+async function callApi(body) {
+    spinner.classList.remove('hidden');
+    spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
 
@@ -377,8 +382,8 @@ async function callApi(body) {
     } finally {
         spinner.classList.add('hidden');
     }
-    */
 }
+*/
 
 // --- Step 1: Analysis ---
 async function handleAnalysisRequest() {
@@ -486,7 +491,7 @@ function renderFusionReport(data) {
 
 // --- Utility Functions ---
 
-// [추가] 숫자 카운트업 애니메이션 함수
+// [수정] 숫자 카운트업 애니메이션 함수 추가
 function animateValue(obj, start, end, duration) {
     let startTimestamp = null;
     const step = (timestamp) => {
