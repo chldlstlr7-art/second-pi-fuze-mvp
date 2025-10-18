@@ -56,10 +56,26 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .input-group { margin-bottom: 25px; }
-        .input-group label { font-weight: bold; display: block; margin-bottom: 10px; color: var(--text-dark); }
-        select, textarea { width: 100%; min-height: 50px; padding: 12px 15px; border-radius: 8px; border: 1px solid #D1D5DB; font-size: 16px; font-family: inherit; box-sizing: border-box; }
-        textarea { min-height: 150px; resize: vertical; }
+        .file-drop-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            color: var(--text-light);
+            font-weight: bold;
+            margin-bottom: 20px;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .file-drop-area.dragover { background-color: #EFF6FF; border-color: var(--primary-color); }
+        .file-drop-area input[type="file"] { display: none; }
+        .file-drop-area .file-msg { cursor: pointer; }
+        #file-name { font-weight: bold; color: var(--secondary-color); margin-top: 10px; }
+        .divider-or { text-align: center; font-weight: bold; color: var(--text-light); margin: 20px 0; position: relative; }
+        .divider-or::before, .divider-or::after { content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background-color: var(--border-color); }
+        .divider-or::before { left: 0; }
+        .divider-or::after { right: 0; }
+
+        textarea { width: 100%; min-height: 150px; padding: 15px; border-radius: 8px; border: 1px solid #D1D5DB; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box; }
         
         button { display: block; width: 100%; padding: 15px; background: linear-gradient(45deg, var(--primary-color), #60A5FA); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; }
         button:disabled { background: #D1D5DB; cursor: not-allowed; }
@@ -84,7 +100,7 @@
 
         .fusion-summary { background-color: #EFF6FF; border-left: 5px solid var(--primary-color); padding: 20px; border-radius: 8px; margin-bottom: 20px;}
         .fusion-features ul { list-style-type: none; padding-left: 0; }
-        .fusion-features li { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%2310B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>') no-repeat left center; padding-left: 30px; margin-bottom: 15px; line-height: 1.5; }
+        .fusion-features li { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0_0_24_24" fill="none" stroke="%2310B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>') no-repeat left center; padding-left: 30px; margin-bottom: 15px; line-height: 1.5; }
         
         .action-buttons-container { margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; }
         #btn-copy-result { background: var(--secondary-color); margin-bottom: 20px; }
@@ -108,18 +124,15 @@
         </div>
 
         <div id="stage-input" class="card">
-            <div class="input-group">
-                <label for="doc-type">1. 분석할 문서 유형을 선택하세요.</label>
-                <select id="doc-type">
-                    <option value="idea">아이디어 / 기획안</option>
-                    <option value="essay">논설문 / 에세이</option>
-                    <option value="reflection">소감문 / 리뷰</option>
-                </select>
+            <h2>글 입력</h2>
+             <div class="file-drop-area" id="file-drop-area">
+                <input type="file" id="file-upload" accept=".txt,.pdf,.docx">
+                <p class="file-msg">분석할 파일(.txt, .pdf, .docx)을 이곳에 끌어다 놓거나 클릭하여 선택하세요.</p>
+                <p id="file-name"></p>
             </div>
-            <div class="input-group">
-                <label for="idea-input">2. 내용을 입력하거나 파일을 업로드하세요.</label>
-                <textarea id="idea-input" placeholder="여기에 아이디어를 입력하세요..."></textarea>
-            </div>
+            <div class="divider-or">또는</div>
+            <p>아래 텍스트 박스에 직접 내용을 입력해주세요.</p>
+            <textarea id="idea-input" placeholder="여기에 분석할 내용을 입력하세요..."></textarea>
             <button id="btn-start-analysis">분석 시작</button>
         </div>
         
@@ -137,6 +150,13 @@
         
         <div id="loading-spinner" class="spinner hidden"></div>
     </div>
+    
+    <!-- External Libraries for file processing -->
+    <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
+    </script>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -148,17 +168,100 @@
         }
         const user = JSON.parse(userData);
         document.getElementById('welcome-message').textContent = `${user.userName}님, 환영합니다!`;
+
+        const dropArea = document.getElementById('file-drop-area');
+        const fileInput = document.getElementById('file-upload');
+        const fileNameDisplay = document.getElementById('file-name');
+        const ideaTextarea = document.getElementById('idea-input');
+        const spinner = document.getElementById('loading-spinner');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        ['dragenter', 'dragover'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false));
+        ['dragleave', 'drop'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false));
+        
+        dropArea.addEventListener('drop', handleDrop, false);
+        dropArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleDrop(e) { handleFiles(e.dataTransfer.files); }
+
+        async function handleFiles(files) {
+            if (files.length > 1) { alert("하나의 파일만 업로드할 수 있습니다."); return; }
+            const file = files[0];
+            const validTypes = ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+            if (!validTypes.includes(file.type)) {
+                alert("허용된 파일 형식이 아닙니다. (.txt, .pdf, .docx)");
+                return;
+            }
+
+            fileNameDisplay.textContent = `파일 처리 중: ${file.name}`;
+            spinner.classList.remove('hidden');
+            ideaTextarea.value = '';
+
+            try {
+                let text = '';
+                if (file.type === 'text/plain') {
+                    text = await file.text();
+                } else if (file.type === 'application/pdf') {
+                    text = await extractTextFromPdf(file);
+                } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                    text = await extractTextFromDocx(file);
+                }
+                ideaTextarea.value = text;
+                fileNameDisplay.textContent = `파일 로드 완료: ${file.name}`;
+            } catch (error) {
+                alert(`파일을 읽는 중 오류가 발생했습니다: ${error.message}`);
+                fileNameDisplay.textContent = "파일 처리 실패";
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+        
+        function extractTextFromDocx(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    mammoth.extractRawText({ arrayBuffer: event.target.result })
+                        .then(result => resolve(result.value))
+                        .catch(reject);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        async function extractTextFromPdf(file) {
+            const reader = new FileReader();
+            return new Promise((resolve, reject) => {
+                reader.onload = async (event) => {
+                    try {
+                        const pdf = await pdfjsLib.getDocument({ data: event.target.result }).promise;
+                        let textContent = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const text = await page.getTextContent();
+                            textContent += text.items.map(s => s.str).join(' ');
+                        }
+                        resolve(textContent);
+                    } catch (error) { reject(error); }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
     });
 
-    let originalIdea = '', aiQuestions = [], fusionResultForCopy = '', currentDocType = '';
+    let originalIdea = '', aiQuestions = [], fusionResultForCopy = '';
     const stages = { input: document.getElementById('stage-input'), analysis: document.getElementById('stage-analysis'), questions: document.getElementById('stage-questions'), fusion: document.getElementById('stage-fusion') };
     const steps = { 1: document.getElementById('step-1'), 2: document.getElementById('step-2'), 3: document.getElementById('step-3') };
     const spinner = document.getElementById('loading-spinner');
     
     document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
-    // These buttons are inside dynamically generated content, so event listeners will be added later
-    // document.getElementById('btn-show-questions').addEventListener('click', () => revealStage('questions'));
-    // document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
 
     function updateProgressBar(stageName) {
         Object.values(steps).forEach(step => step.classList.remove('active'));
@@ -213,13 +316,12 @@
     }
 
     async function handleAnalysisRequest() {
-        currentDocType = document.getElementById('doc-type').value;
         originalIdea = document.getElementById('idea-input').value.trim();
         if (!originalIdea) return alert('아이디어를 입력해주세요.');
         
         finalizeStage('input');
         
-        const data = await callApi({ stage: 'analyze', docType: currentDocType, idea: originalIdea });
+        const data = await callApi({ stage: 'analyze', idea: originalIdea });
         
         if (data) {
             renderAnalysisReport(data);
@@ -235,7 +337,7 @@
         finalizeStage('analysis');
         finalizeStage('questions');
         
-        const data = await callApi({ stage: 'fuse', originalIdea, answers: userAnswers, docType: currentDocType });
+        const data = await callApi({ stage: 'fuse', originalIdea, answers: userAnswers });
         
         if (data) {
             renderFusionReport(data);
@@ -244,11 +346,11 @@
     }
 
     function renderAnalysisReport(data) {
-        const { originalityScore, overallAssessment, judgmentCriteria, plagiarismReport } = data;
+        const { originalityScore, overallAssessment, judgmentCriteria, plagiarismReport, documentType } = data;
         const analysisStage = stages.analysis;
 
         let reportHTML = `
-            <h2>1. 독창성 진단 리포트</h2>
+            <h2>1. 독창성 진단 리포트 <span style="font-size: 0.6em; color: var(--text-light); font-weight: 500;">(분석 유형: ${documentType})</span></h2>
             <div class="analysis-section">
                 <h3>종합 평가</h3>
                 <p>${overallAssessment}</p>
@@ -326,7 +428,7 @@
         const questionsStage = stages.questions;
         let questionsHTML = `
             <h2>2. 창의적 도발 질문</h2>
-            <p>AI가 제안한 아래 질문들에 답변하며 아이디어를 확장시켜 보세요.</p>
+            <p>AI가 제안한 아래 질문들에 답변하며 글을 발전시켜 보세요.</p>
             <div id="questions-container-dynamic">
                 ${questions.map((q, index) => `
                     <div class="question-card">
@@ -335,7 +437,7 @@
                     </div>
                 `).join('')}
             </div>
-            <button id="btn-submit-answers-dynamic">답변 제출 및 융합 아이디어 생성</button>`;
+            <button id="btn-submit-answers-dynamic">답변 제출 및 최종 제안 생성</button>`;
         questionsStage.innerHTML = questionsHTML;
         document.getElementById('btn-submit-answers-dynamic').addEventListener('click', handleFusionRequest);
     }
@@ -344,7 +446,7 @@
         const { fusionTitle, fusionSummary, connection, keyFeatures } = data;
         const fusionStage = stages.fusion;
         let fusionHTML = `
-            <h2>3. 최종 융합 아이디어 제안</h2>
+            <h2>3. 최종 제안</h2>
             <div class="fusion-summary">
                 <h3 style="color: var(--primary-color);">${fusionTitle}</h3>
                 <p>${fusionSummary}</p>
@@ -374,7 +476,7 @@
         document.getElementById('btn-feedback-no-dynamic').addEventListener('click', () => handleFeedback(false));
         document.getElementById('btn-restart-dynamic').addEventListener('click', () => location.reload());
 
-        fusionResultForCopy = `## 융합 아이디어: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${keyFeatures.map(f => `- ${f}`).join('\n')}`;
+        fusionResultForCopy = `## 최종 제안: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${keyFeatures.map(f => `- ${f}`).join('\n')}`;
     }
 
     function handleCopyResult() {
@@ -404,6 +506,4 @@
 </script>
 </body>
 </html>
-
-
 
