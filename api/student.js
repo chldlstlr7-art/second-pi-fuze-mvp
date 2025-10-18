@@ -20,7 +20,7 @@ const model_1 = genAI_1.getGenerativeModel({ model: "gemini-2.5-flash" });
 const model_2 = genAI_2.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 
-// --- 프롬프트 엔지니어링 (업무 재분배) ---
+// --- 프롬프트 엔지니어링 (업무 재분배 및 최적화) ---
 
 // [작업 1] 개념/구조 분석 프롬프트
 const promptForConceptualAnalysis = `
@@ -45,23 +45,20 @@ Be extremely fast and concise. Output JSON in Korean.
 }
 `;
 
-// [작업 2] 텍스트 표절 분석 프롬프트
+// [작업 2] 텍스트 표절 분석 프롬프트 (대폭 간소화)
 const promptForTextualAnalysis = `
-You are a plagiarism detection specialist. Analyze the user's text for textual similarities.
+You are a plagiarism detection specialist. Your ONLY task is to analyze the user's text for direct textual similarities from your internal knowledge.
 Be extremely fast and concise. Output JSON in Korean.
 
 **Rules:**
-- Differentiate 'plagiarismSuspicion' (no attribution) from 'properCitation' (has quotes/source).
-- Identify 'commonKnowledge' phrases.
-- Report all 'plagiarismSuspicion' instances with a similarityScore >= 80%.
+- ONLY find sentences that appear to be copied without attribution ('plagiarismSuspicion').
+- Report all instances with a similarityScore >= 80%.
 - Respond with a VALID JSON object without any markdown wrappers.
 
 **JSON STRUCTURE:**
 {
   "textPlagiarismScore": <Number 0-100 for textual plagiarism risk>,
-  "plagiarismSuspicion": [{ "similarSentence": "<...>", "source": "<...>", "similarityScore": <...> }],
-  "properCitation": [{ "citedSentence": "<...>", "source": "<...>" }],
-  "commonKnowledge": ["<list of common knowledge phrases found>"]
+  "plagiarismSuspicion": [{ "similarSentence": "<...>", "source": "<estimated source>", "similarityScore": <...> }]
 }
 `;
 
@@ -167,10 +164,10 @@ module.exports = async (req, res) => {
                 questions: conceptualJson.questions,
                 textPlagiarismScore: textualJson.textPlagiarismScore,
                 plagiarismReport: {
-                    plagiarismSuspicion: textualJson.plagiarismSuspicion,
-                    properCitation: textualJson.properCitation,
-                    commonKnowledge: textualJson.commonKnowledge,
-                    structuralPlagiarism: conceptualJson.structuralPlagiarism,
+                    plagiarismSuspicion: textualJson.plagiarismSuspicion || [],
+                    properCitation: [], // Removed from AI task, return empty
+                    commonKnowledge: [], // Removed from AI task, return empty
+                    structuralPlagiarism: conceptualJson.structuralPlagiarism || [],
                 }
             };
             
