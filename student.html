@@ -135,28 +135,53 @@
         .report-item.structural { background-color: #FEFBEB; border-left: 5px solid var(--warning-color); }
         .report-item.textual { background-color: #FEF2F2; border-left: 5px solid var(--danger-color); }
 
-        .similarity-bar-container { width: 100%; background-color: var(--border-color); border-radius: 5px; height: 10px; margin-top: 10px; overflow: hidden; }
-        .similarity-bar { background-color: var(--warning-color); height: 100%; border-radius: 5px; transition: width 1s ease-in-out; }
-        
-        .similarity-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; }
-        .level-매우높음 { background-color: #991B1B; color: white; }
-        .level-높음 { background-color: var(--danger-color); color: white; }
-        .level-주의 { background-color: var(--warning-color); color: white; }
-        .level-보통 { background-color: #FBBF24; color: #78350F; }
-        .level-낮음 { background-color: #A7F3D0; color: #064E3B; }
-        .level-매우낮음 { background-color: #D1FAE5; color: #065F46; }
+        .originality-reasoning {
+            background-color: #EFF6FF;
+            border-left: 5px solid var(--primary-color);
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+        .originality-reasoning p { margin: 0; line-height: 1.6; }
 
         .question-card { margin-bottom: 20px; background-color: #F9FAFB; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
         .question-card label { font-weight: bold; display: block; margin-bottom: 10px; }
         .question-card textarea { min-height: 80px; }
 
-        .fusion-analysis-grid { display: flex; flex-direction: column; gap: 35px; margin-bottom: 30px; position: relative; }
-        .analysis-item { background-color: var(--bg-color); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); position: relative; border-left-width: 5px; }
-        .analysis-item:not(:last-child)::after { content: '▼'; position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%); font-size: 20px; color: var(--border-color); z-index: 1; }
+        .fusion-analysis-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 35px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .analysis-item {
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            border-left-width: 5px; 
+        }
+        .analysis-item:not(:last-child)::after {
+            content: '▼';
+            position: absolute;
+            bottom: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: var(--border-color);
+            z-index: 1;
+        }
         .analysis-item.original { border-left-color: #9CA3AF; }
         .analysis-item.change { border-left-color: var(--warning-color); }
         .analysis-item.conclusion { border-left-color: var(--secondary-color); }
-        .analysis-item h4 { margin-top: 0; padding-bottom: 8px; border-bottom: 2px solid; display: inline-block; }
+        .analysis-item h4 {
+            margin-top: 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid;
+            display: inline-block;
+        }
         .analysis-item.original h4 { color: #9CA3AF; border-color: #E5E7EB; }
         .analysis-item.change h4 { color: #B45309; border-color: #FDE68A; }
         .analysis-item.conclusion h4 { color: #047857; border-color: #A7F3D0; }
@@ -216,10 +241,12 @@
         
         <div id="stage-analysis" class="card hidden">
             <h2>1. 독창성 진단 리포트 <span id="analysis-doc-type" style="font-size: 0.6em; color: var(--text-light); font-weight: 500;"></span></h2>
+            
             <div class="analysis-section">
                 <h3>핵심 주장/내용 요약</h3>
                 <ol id="core-summary-list"></ol>
             </div>
+    
             <div class="analysis-section">
                 <h3>종합 평가 지표</h3>
                 <div class="gauges-grid">
@@ -228,7 +255,7 @@
                         <svg width="200" height="120" viewBox="0 0 200 120">
                             <defs><linearGradient id="logicalGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#D0021B"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#50E3C2"/></linearGradient></defs>
                             <path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" />
-                            <path id="logical-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#logicalGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3; transition: stroke-dashoffset 1.2s ease-in-out;"/>
+                            <path id="logical-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#logicalGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3;"/>
                             <text id="logical-gauge-text" x="100" y="95" text-anchor="middle" font-size="28px" font-weight="bold">0%</text>
                         </svg>
                     </div>
@@ -237,16 +264,22 @@
                         <svg width="200" height="120" viewBox="0 0 200 120">
                             <defs><linearGradient id="textGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#50E3C2"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#D0021B"/></linearGradient></defs>
                             <path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" />
-                            <path id="text-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#textGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3; transition: stroke-dashoffset 1.2s ease-in-out;"/>
+                            <path id="text-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#textGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3;"/>
                             <text id="text-gauge-text" x="100" y="95" text-anchor="middle" font-size="28px" font-weight="bold">0%</text>
                         </svg>
                     </div>
                 </div>
+                <div class="originality-reasoning">
+                    <h4>분석 코멘트</h4>
+                    <p id="originality-reasoning-text"></p>
+                </div>
             </div>
+            
             <div class="analysis-section">
                 <h3>논리 흐름도 분석</h3>
                 <div class="flowchart" id="logic-flowchart"></div>
             </div>
+    
             <div class="analysis-section">
                 <h3>표절 검사 상세 리포트</h3>
                 <div id="plagiarism-report-container"></div>
