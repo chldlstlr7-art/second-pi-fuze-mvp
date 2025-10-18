@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TA/Professor Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #059669; /* 조교/교수용 메인 색상 (Green) */
+            --bg-color: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-dark: #1F2937;
+            --text-light: #6B7280;
+            --border-color: #E5E7EB;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin: 0;
+        }
+        .header p { font-size: 1.1em; color: var(--text-light); margin-top: 8px; }
+        
+        .card { 
+            background-color: var(--card-bg); 
+            border-radius: 16px; 
+            padding: 35px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 8px 32px rgba(0, 30, 80, 0.08); 
+            border: 1px solid var(--border-color);
+        }
+        .hidden { display: none !important; }
+        
+        textarea { 
+            width: 100%; 
+            min-height: 250px; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 1px solid #D1D5DB; 
+            font-size: 16px; 
+            font-family: inherit; 
+            resize: vertical; 
+            box-sizing: border-box; 
+        }
+        textarea:focus { 
+            border-color: var(--primary-color); 
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2); 
+            outline: none; 
+        }
+        
+        button { 
+            display: block; 
+            width: 100%; 
+            padding: 15px; 
+            background: var(--primary-color); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: background-color 0.2s; 
+            margin-top: 20px; 
+        }
+        button:hover { background: #047857; }
+        button:disabled { background: #D1D5DB; cursor: not-allowed; }
+        
+        .spinner { 
+            width: 40px; 
+            height: 40px; 
+            border: 4px solid rgba(0,0,0,0.1); 
+            border-left-color: var(--primary-color); 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+            margin: 40px auto; 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 결과물 섹션 */
+        h3 { 
+            font-size: 1.4em; 
+            color: var(--text-dark); 
+            margin-bottom: 15px; 
+            padding-bottom: 10px; 
+            border-bottom: 2px solid var(--border-color);
+        }
+        .report-output { 
+            background-color: #F9FAFB; 
+            border-radius: 8px; 
+            padding: 25px; 
+            border: 1px solid var(--border-color);
+        }
+        .report-output p, .report-output ul {
+            font-size: 1.1em;
+            line-height: 1.7;
+        }
+        .report-output ul {
+            padding-left: 20px;
+        }
+        .report-output ul li {
+            margin-bottom: 10px;
+        }
+        .report-output strong {
+             color: var(--primary-color);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>TA/Professor Dashboard</h1>
+            <p>학생 리포트 요약 및 독창성 평가 초안 생성</p>
+        </div>
+
+        <div id="stage-input" class="card">
+            <h2>리포트 입력</h2>
+            <p>학생의 리포트 본문을 여기에 붙여넣으세요.</p>
+            <textarea id="report-input" placeholder="학생 리포트 내용..."></textarea>
+            <button id="btn-start-assessment">평가 초안 생성</button>
+        </div>
+        
+        <div id="loading-spinner" class="spinner hidden"></div>
+
+        <div id="stage-result" class="card hidden">
+            <h2>AI 분석 리포트</h2>
+            
+            <div class="report-output">
+                <h3>핵심 요약</h3>
+                <p id="result-summary"></p>
+            </div>
+
+            <div class="report-output" style="margin-top: 20px;">
+                <h3>독창성 평가 (초안)</h3>
+                <p id="result-originality-draft"></p>
+                <ul id="result-key-points">
+                    </ul>
+            </div>
+            
+            <div class="report-output" style="margin-top: 20px; background-color: #FFFBEB;">
+                <h3 style="color: #D97706;">유사 의심 문구 (참고)</h3>
+                <ul id="result-similar-phrases" style="list-style-type: '⚠️ ';">
+                    </ul>
+            </div>
+
+            <button id="btn-restart" style="margin-top: 30px; background: #6B7280;">새 리포트 분석</button>
+        </div>
+    </div>
+
+<script>
+    // --- DOM Elements ---
+    const inputStage = document.getElementById('stage-input');
+    const resultStage = document.getElementById('stage-result');
+    const reportInput = document.getElementById('report-input');
+    const btnStart = document.getElementById('btn-start-assessment');
+    const btnRestart = document.getElementById('btn-restart');
+    const spinner = document.getElementById('loading-spinner');
+
+    // --- Event Listeners ---
+    btnStart.addEventListener('click', handleAssessmentRequest);
+    btnRestart.addEventListener('click', () => location.reload());
+
+    // --- API Call Logic (TA용) ---
+    async function callApi(body) {
+        spinner.classList.remove('hidden');
+        spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        btnStart.disabled = true;
+        reportInput.disabled = true;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초
+
+        try {
+            const response = await fetch('/api/analyze', { // 동일한 API 엔드포인트 사용
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({ error: "An unknown server error occurred." }));
+                throw new Error(errData.error || `서버 오류: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                 alert('오류: AI 응답 시간이 너무 오래 걸립니다. (Timeout)');
+            } else {
+                 alert(`오류가 발생했습니다: ${error.message}`);
+            }
+            location.reload();
+        } finally {
+            spinner.classList.add('hidden');
+        }
+    }
+
+    // --- Step 1: Assessment Request ---
+    async function handleAssessmentRequest() {
+        const reportText = reportInput.value.trim();
+        if (!reportText) {
+            alert('리포트 내용을 입력해주세요.');
+            return;
+        }
+        
+        // 학생용 stage('analyze', 'fuse')와 구분되는 새로운 stage 이름 사용
+        const data = await callApi({ 
+            stage: 'assess_report', 
+            reportText: reportText 
+        });
+        
+        if (data) {
+            renderAssessmentReport(data);
+            inputStage.classList.add('hidden');
+            resultStage.classList.remove('hidden');
+            resultStage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+             btnStart.disabled = false;
+             reportInput.disabled = false;
+        }
+    }
+
+    // --- Step 2: Render Report ---
+    function renderAssessmentReport(data) {
+        const { summary, originalityDraft, keyStrengths, areasForImprovement, similarPhrases } = data;
+
+        document.getElementById('result-summary').textContent = summary;
+        document.getElementById('result-originality-draft').textContent = originalityDraft;
+
+        // 강점 및 개선점 렌더링
+        const keyPointsList = document.getElementById('result-key-points');
+        keyPointsList.innerHTML = '';
+        keyStrengths.forEach(point => {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>[강점]</strong> ${point}`;
+            keyPointsList.appendChild(li);
+        });
+        areasForImprovement.forEach(point => {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>[개선점]</strong> ${point}`;
+            keyPointsList.appendChild(li);
+        });
+
+        // 유사 의심 문구 렌더링
+        const similarList = document.getElementById('result-similar-phrases');
+        similarList.innerHTML = '';
+        if (similarPhrases && similarPhrases.length > 0) {
+            similarPhrases.forEach(phrase => {
+                const li = document.createElement('li');
+                li.textContent = `"${phrase}"`;
+                similarList.appendChild(li);
+            });
+        } else {
+            similarList.innerHTML = '<li>특별히 감지된 유사 문구가 없습니다.</li>';
+        }
+    }
+</script>
+</body>
+</html>
