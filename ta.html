@@ -42,24 +42,7 @@
         }
         .hidden { display: none !important; }
         
-        textarea { 
-            width: 100%; 
-            min-height: 250px; 
-            padding: 15px; 
-            border-radius: 8px; 
-            border: 1px solid #D1D5DB; 
-            font-size: 16px; 
-            font-family: inherit; 
-            resize: vertical; 
-            box-sizing: border-box; 
-        }
-        textarea:focus { 
-            border-color: var(--primary-color); 
-            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2); 
-            outline: none; 
-        }
-        
-        /* --- START: 파일 업로드 스타일 --- */
+        /* --- START: 파일 업로드 스타일 (수정됨) --- */
         #drop-zone {
             border: 2px dashed var(--border-color);
             border-radius: 8px;
@@ -77,16 +60,34 @@
         #file-input {
             display: none; /* 숨김 처리 */
         }
-        #file-status {
-            font-weight: bold;
-            color: var(--primary-color);
-            margin-top: 15px;
-            text-align: center;
+        /* 파일 목록 리스트 */
+        #file-list-container {
+            margin-top: 20px;
         }
-        .or-divider {
-            text-align: center;
+        #file-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        #file-list li {
+            background-color: #F9FAFB;
+            border: 1px solid var(--border-color);
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #file-list li .status-text {
             color: var(--text-light);
-            margin: 20px 0;
+            font-weight: normal;
+            font-style: italic;
+        }
+        #file-list li .status-error {
+            color: #DC2626; /* Red */
             font-weight: bold;
         }
         /* --- END: 파일 업로드 스타일 --- */
@@ -119,7 +120,23 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* (이하 기존 스타일 동일) */
+        /* 결과물 섹션 */
+        /* (수정) stage-result는 이제 카드 자체가 아니라 컨테이너임 */
+        #stage-result {
+            padding-top: 20px;
+        }
+        /* (수정) 결과 카드 내의 제목 */
+        #stage-result .card h2 {
+            font-size: 1.8em;
+            color: var(--primary-color);
+            margin-top: 0;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        #stage-result .card.error-card h2 {
+            color: #DC2626; /* Red */
+        }
+
         h3 { 
             font-size: 1.4em; 
             color: var(--text-dark); 
@@ -132,10 +149,12 @@
             border-radius: 8px; 
             padding: 25px; 
             border: 1px solid var(--border-color);
+            margin-top: 20px;
         }
         .report-output p, .report-output ul {
             font-size: 1.1em;
             line-height: 1.7;
+            margin-top: 0;
         }
         .report-output ul {
             padding-left: 20px;
@@ -198,63 +217,44 @@
         </div>
 
         <div id="stage-input" class="card">
-            <h2>리포트 입력</h2>
+            <h2>리포트 파일 업로드</h2>
             
-            <input type="file" id="file-input" accept=".pdf, .docx">
+            <input type="file" id="file-input" accept=".pdf, .docx" multiple>
             <div id="drop-zone">
-                여기에 PDF 또는 .docx 파일을 드래그 앤 드롭하세요
+                여기에 PDF 또는 .docx 파일들을 드래그 앤 드롭하세요
                 <br>또는 클릭하여 파일 선택
             </div>
-            <p id="file-status"></p>
-
-            <div class="or-divider">또는</div>
-
-            <p>텍스트를 직접 붙여넣으세요.</p>
-            <textarea id="report-input" placeholder="학생 리포트 내용..."></textarea>
             
-            <button id="btn-start-assessment">평가 초안 생성</button>
+            <div id="file-list-container">
+                <ul id="file-list">
+                    </ul>
+            </div>
+
+            <button id="btn-start-assessment">선택된 파일 분석 시작</button>
         </div>
         
-        <div id="loading-spinner" class="spinner hidden"></div>
-
-        <div id="stage-result" class="card hidden">
-            <h2>AI 분석 리포트</h2>
-            
-            <div class="report-output">
-                <h3>핵심 요약</h3>
-                <p id="result-summary"></p>
+        <div id="stage-result" class="hidden">
             </div>
 
-            <div class="report-output" style="margin-top: 20px;">
-                <h3>독창성 평가 (초안)</h3>
-                <p id="result-originality-draft"></p>
-                <ul id="result-key-points">
-                </ul>
-            </div>
-            
-            <div class="report-output" style="margin-top: 20px; background-color: #F9FAFB;">
-                <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3>
-                <ul id="result-similar-phrases">
-                </ul>
-            </div>
+        <button id="btn-restart" class="hidden" style="margin-top: 30px; background: #6B7280;">새 리포트 분석</button>
 
-            <button id="btn-restart" style="margin-top: 30px; background: #6B7280;">새 리포트 분석</button>
-        </div>
     </div>
 
 <script>
-    // --- DOM Elements ---
+    // --- (신규) 글로벌 상태 ---
+    let filesToAnalyze = []; // { name: string, text: string, error?: string }
+
+    // --- (기존) DOM Elements ---
     const inputStage = document.getElementById('stage-input');
     const resultStage = document.getElementById('stage-result');
-    const reportInput = document.getElementById('report-input');
     const btnStart = document.getElementById('btn-start-assessment');
     const btnRestart = document.getElementById('btn-restart');
-    const spinner = document.getElementById('loading-spinner');
+    // const spinner = document.getElementById('loading-spinner'); // (수정) 개별 스피너 사용으로 변경
 
     // --- (신규) 파일 입력 Elements ---
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
-    const fileStatus = document.getElementById('file-status');
+    const fileList = document.getElementById('file-list');
     // PDF.js worker 설정
     if (window.pdfjsLib) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
@@ -264,9 +264,8 @@
     dropZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFileSelect);
     
-    // 드래그 앤 드롭 이벤트
     dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault(); // 기본 이벤트 방지
+        e.preventDefault(); 
         dropZone.classList.add('drag-over');
     });
     dropZone.addEventListener('dragleave', (e) => {
@@ -277,19 +276,44 @@
         e.preventDefault();
         dropZone.classList.remove('drag-over');
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            fileInput.files = e.dataTransfer.files; // 드롭된 파일을 input에 할당
-            handleFileSelect(); // 파일 처리 함수 호출
+            fileInput.files = e.dataTransfer.files; 
+            handleFileSelect(); 
         }
     });
 
-    // --- (신규) 파일 처리 함수 ---
+    // --- (수정) 다중 파일 처리 함수 ---
     async function handleFileSelect() {
-        const file = fileInput.files[0];
-        if (!file) return;
+        const files = fileInput.files;
+        if (!files || files.length === 0) return;
 
-        fileStatus.textContent = `"${file.name}" 읽는 중...`;
-        reportInput.value = ''; // 텍스트 영역 초기화
+        filesToAnalyze = []; // 글로벌 목록 초기화
+        fileList.innerHTML = `<li><span class="status-text">${files.length}개 파일 읽는 중...</span></li>`;
 
+        // 각 파일에 대해 텍스트 추출 프로미스 생성
+        const extractionPromises = Array.from(files).map(processFile);
+        
+        // 모든 파일 처리가 끝날 때까지 대기
+        const results = await Promise.all(extractionPromises);
+        
+        filesToAnalyze = results; // 글로벌 상태에 저장
+        
+        // 파일 목록 UI 업데이트
+        fileList.innerHTML = ''; // 목록 비우기
+        filesToAnalyze.forEach(file => {
+            const li = document.createElement('li');
+            let statusHtml = '';
+            if (file.error) {
+                statusHtml = `<span class="status-error">${file.error}</span>`;
+            } else {
+                statusHtml = `<span class="status-text" style="color: var(--primary-color);">준비 완료</span>`;
+            }
+            li.innerHTML = `${escapeHTML(file.name)} ${statusHtml}`;
+            fileList.appendChild(li);
+        });
+    }
+
+    // (신규) 단일 파일 처리 헬퍼 함수
+    async function processFile(file) {
         try {
             let text = '';
             if (file.type === 'application/pdf') {
@@ -297,18 +321,16 @@
             } else if (file.name.endsWith('.docx')) {
                 text = await extractDocxText(file);
             } else {
-                throw new Error('지원하지 않는 파일 형식입니다 (.pdf 또는 .docx).');
+                throw new Error('지원하지 않는 파일 형식 (.pdf / .docx)');
             }
-            reportInput.value = text;
-            fileStatus.textContent = `✅ "${file.name}" 읽기 완료. 텍스트가 아래에 삽입되었습니다.`;
+            return { name: file.name, text: text };
         } catch (error) {
             console.error('File parsing error:', error);
-            fileStatus.textContent = `❌ 파일 읽기 실패: ${error.message}`;
-            alert(`파일을 읽는 데 실패했습니다: ${error.message}`);
+            return { name: file.name, text: null, error: error.message };
         }
     }
 
-    // (신규) .docx 텍스트 추출
+    // (기존) .docx 텍스트 추출
     function extractDocxText(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -323,7 +345,7 @@
         });
     }
 
-    // (신규) .pdf 텍스트 추출
+    // (기존) .pdf 텍스트 추출
     async function extractPdfText(file) {
         const reader = new FileReader();
         return new Promise((resolve, reject) => {
@@ -354,18 +376,14 @@
     btnStart.addEventListener('click', handleAssessmentRequest);
     btnRestart.addEventListener('click', () => location.reload());
 
-    // --- (기존) API Call Logic (TA용) ---
+    // --- (수정) API Call Logic (순수 네트워크 함수) ---
     async function callApi(body) {
-        spinner.classList.remove('hidden');
-        spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        btnStart.disabled = true;
-        reportInput.disabled = true;
-
+        // (수정) 글로벌 스피너, 버튼 비활성화 제거
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); 
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초
 
         try {
-            const response = await fetch('/api/ta', { // 백엔드 URL은 변경 없음
+            const response = await fetch('/api/ta', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -378,98 +396,135 @@
                 const errData = await response.json().catch(() => ({ error: "An unknown server error occurred." }));
                 throw new Error(errData.error || `서버 오류: ${response.statusText}`);
             }
-            return await response.json();
+            return await response.json(); // 데이터 반환
         } catch (error) {
             if (error.name === 'AbortError') {
-                 alert('오류: AI 응답 시간이 너무 오래 걸립니다. (Timeout)');
-            } else {
-                 alert(`오류가 발생했습니다: ${error.message}`);
+                 throw new Error('AI 응답 시간이 너무 오래 걸립니다. (Timeout)');
             }
-            location.reload();
-        } finally {
-            spinner.classList.add('hidden');
+            throw error; // 에러를 상위로 전파
         }
+        // (수정) finally 블록 제거
     }
 
-    // --- (기존) Step 1: Assessment Request ---
+    // --- (수정) 다중 파일 분석 요청 핸들러 ---
     async function handleAssessmentRequest() {
-        const reportText = reportInput.value.trim();
-        if (!reportText) {
-            alert('리포트 내용을 입력하거나 파일을 업로드해주세요.');
+        const validFiles = filesToAnalyze.filter(f => !f.error && f.text);
+        
+        if (validFiles.length === 0) {
+            alert('분석할 유효한 파일이 없습니다. .pdf 또는 .docx 파일을 업로드해주세요.');
             return;
         }
         
-        const data = await callApi({ 
-            stage: 'assess_report', 
-            reportText: reportText // 텍스트만 전송
-        });
-        
-        if (data) {
-            renderAssessmentReport(data);
-            inputStage.classList.add('hidden');
-            resultStage.classList.remove('hidden');
-            resultStage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-             btnStart.disabled = false;
-             reportInput.disabled = false;
+        inputStage.classList.add('hidden');
+        resultStage.classList.remove('hidden');
+        resultStage.innerHTML = ''; // 결과 영역 초기화
+        btnRestart.classList.remove('hidden');
+        btnStart.disabled = true;
+
+        // 각 파일에 대해 병렬로 분석 시작
+        for (const file of validFiles) {
+            // 1. 즉시 플레이스홀더(로딩 카드) 생성
+            const placeholderId = `result-for-${file.name.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            const placeholderHtml = `
+                <div id="${placeholderId}" class="card">
+                    <h2>분석 중: ${escapeHTML(file.name)}</h2>
+                    <div class="spinner"></div>
+                </div>
+            `;
+            resultStage.insertAdjacentHTML('beforeend', placeholderHtml);
+
+            // 2. 비동기(await 없음)로 API 호출 및 체이닝
+            callApi({ 
+                stage: 'assess_report', 
+                reportText: file.text 
+            })
+            .then(data => {
+                // 3. 성공 시: 플레이스홀더를 실제 결과로 교체
+                const resultHtml = renderAssessmentReport(data); // HTML 문자열 받기
+                const cardElement = document.getElementById(placeholderId);
+                cardElement.innerHTML = `<h2>분석 완료: ${escapeHTML(file.name)}</h2>` + resultHtml;
+            })
+            .catch(error => {
+                // 4. 실패 시: 플레이스홀더를 에러 카드로 교체
+                const cardElement = document.getElementById(placeholderId);
+                cardElement.classList.add('error-card'); // 에러 스타일 적용
+                cardElement.innerHTML = `
+                    <h2>분석 실패: ${escapeHTML(file.name)}</h2>
+                    <p style="color: #DC2626; font-weight: bold;">
+                        오류가 발생했습니다: ${escapeHTML(error.message)}
+                    </p>
+                `;
+            });
         }
     }
 
-    // --- (기존) Step 2: Render Report (URL 렌더링 로직 포함) ---
+    // --- (수정) HTML 문자열을 반환하는 렌더링 함수 ---
     function renderAssessmentReport(data) {
         const { summary, originalityDraft, keyStrengths, areasForImprovement, similarPhrases } = data;
 
-        document.getElementById('result-summary').textContent = summary;
-        document.getElementById('result-originality-draft').textContent = originalityDraft;
-
         // 강점 및 개선점 렌더링
-        const keyPointsList = document.getElementById('result-key-points');
-        keyPointsList.innerHTML = '';
-        if (keyStrengths) {
-            keyStrengths.forEach(point => {
-                const li = document.createElement('li');
-                li.innerHTML = `<strong>[강점]</strong> ${escapeHTML(point)}`;
-                keyPointsList.appendChild(li);
-            });
+        let keyPointsHtml = '';
+        if (keyStrengths && keyStrengths.length > 0) {
+            keyPointsHtml += keyStrengths.map(point => 
+                `<li><strong>[강점]</strong> ${escapeHTML(point)}</li>`
+            ).join('');
         }
-        if (areasForImprovement) {
-            areasForImprovement.forEach(point => {
-                const li = document.createElement('li');
-                li.innerHTML = `<strong>[개선점]</strong> ${escapeHTML(point)}`;
-                keyPointsList.appendChild(li);
-            });
+        if (areasForImprovement && areasForImprovement.length > 0) {
+             keyPointsHtml += areasForImprovement.map(point => 
+                `<li><strong>[개선점]</strong> ${escapeHTML(point)}</li>`
+            ).join('');
+        }
+        if (keyPointsHtml === '') {
+            keyPointsHtml = '<li>분석된 강점/개선점이 없습니다.</li>';
         }
 
         // 상세 유사성 카드 렌더링 (URL 포함)
-        const similarList = document.getElementById('result-similar-phrases');
-        similarList.innerHTML = ''; 
-        
+        let similarListHtml = '';
         if (similarPhrases && similarPhrases.length > 0) {
-            similarPhrases.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'similarity-card'; 
-                
-                // URL을 처리하는 로직
+            similarListHtml = similarPhrases.map(item => {
+                // URL 처리 로직
                 let urlHTML = '';
                 if (item.sourceURL && item.sourceURL.startsWith('http')) {
                     urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceURL)}</a>`;
                 } else if (item.sourceURL && item.sourceURL !== 'N/A') {
                     urlHTML = `<br><strong>추정 URL:</strong> ${escapeHTML(item.sourceURL)}`;
                 }
-
-                li.innerHTML = `
-                    <p class="suspicious-phrase">"${escapeHTML(item.phrase)}"</p>
-                    <div class="suspicious-details">
-                        <strong>유사 출처 (추정):</strong> ${escapeHTML(item.likelySource)}
-                        ${urlHTML} 
-                        <br><strong>유사성 유형:</strong> ${escapeHTML(item.similarityType)}
-                    </div>
+                
+                return `
+                    <li class="similarity-card">
+                        <p class="suspicious-phrase">"${escapeHTML(item.phrase)}"</p>
+                        <div class="suspicious-details">
+                            <strong>유사 출처 (추정):</strong> ${escapeHTML(item.likelySource)}
+                            ${urlHTML} 
+                            <br><strong>유사성 유형:</strong> ${escapeHTML(item.similarityType)}
+                        </div>
+                    </li>
                 `;
-                similarList.appendChild(li);
-            });
+            }).join('');
         } else {
-            similarList.innerHTML = '<li style="list-style-type: none; color: #6B7280;">엄격한 기준(직접 인용, 최소 변경)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
+            similarListHtml = '<li style="list-style-type: none; color: #6B7280;">엄격한 기준(직접 인용, 최소 변경)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
         }
+
+        // 전체 HTML 문자열 반환
+        return `
+            <div class="report-output">
+                <h3>핵심 요약</h3>
+                <p>${escapeHTML(summary)}</p>
+            </div>
+            <div class="report-output">
+                <h3>독창성 평가 (초안)</h3>
+                <p>${escapeHTML(originalityDraft)}</p>
+                <ul id="result-key-points">
+                    ${keyPointsHtml}
+                </ul>
+            </div>
+            <div class="report-output" style="background-color: #F9FAFB;">
+                <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3>
+                <ul id="result-similar-phrases">
+                    ${similarListHtml}
+                </ul>
+            </div>
+        `;
     }
     
     /**
