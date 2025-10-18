@@ -56,50 +56,10 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .file-drop-area {
-            border: 2px dashed var(--border-color);
-            border-radius: 8px;
-            padding: 30px;
-            text-align: center;
-            color: var(--text-light);
-            font-weight: bold;
-            margin-bottom: 20px;
-            transition: background-color 0.2s, border-color 0.2s;
-        }
-        .file-drop-area.dragover {
-            background-color: #EFF6FF;
-            border-color: var(--primary-color);
-        }
-        .file-drop-area input[type="file"] {
-            display: none;
-        }
-        .file-drop-area .file-msg {
-            cursor: pointer;
-        }
-        #file-name {
-            font-weight: bold;
-            color: var(--secondary-color);
-            margin-top: 10px;
-        }
-        .divider-or {
-            text-align: center;
-            font-weight: bold;
-            color: var(--text-light);
-            margin: 20px 0;
-            position: relative;
-        }
-        .divider-or::before, .divider-or::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 40%;
-            height: 1px;
-            background-color: var(--border-color);
-        }
-        .divider-or::before { left: 0; }
-        .divider-or::after { right: 0; }
-
-        textarea { width: 100%; min-height: 150px; padding: 15px; border-radius: 8px; border: 1px solid #D1D5DB; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box; }
+        .input-group { margin-bottom: 25px; }
+        .input-group label { font-weight: bold; display: block; margin-bottom: 10px; color: var(--text-dark); }
+        select, textarea { width: 100%; min-height: 50px; padding: 12px 15px; border-radius: 8px; border: 1px solid #D1D5DB; font-size: 16px; font-family: inherit; box-sizing: border-box; }
+        textarea { min-height: 150px; resize: vertical; }
         
         button { display: block; width: 100%; padding: 15px; background: linear-gradient(45deg, var(--primary-color), #60A5FA); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; }
         button:disabled { background: #D1D5DB; cursor: not-allowed; }
@@ -148,40 +108,35 @@
         </div>
 
         <div id="stage-input" class="card">
-            <h2>아이디어 입력</h2>
-            <div class="file-drop-area" id="file-drop-area">
-                <input type="file" id="file-upload" accept=".txt,.pdf,.docx">
-                <p class="file-msg">분석할 파일(.txt, .pdf, .docx)을 이곳에 끌어다 놓거나 클릭하여 선택하세요.</p>
-                <p id="file-name"></p>
+            <div class="input-group">
+                <label for="doc-type">1. 분석할 문서 유형을 선택하세요.</label>
+                <select id="doc-type">
+                    <option value="idea">아이디어 / 기획안</option>
+                    <option value="essay">논설문 / 에세이</option>
+                    <option value="reflection">소감문 / 리뷰</option>
+                </select>
             </div>
-            <div class="divider-or">또는</div>
-            <p>아래 텍스트 박스에 직접 내용을 입력해주세요.</p>
-            <textarea id="idea-input" placeholder="여기에 아이디어를 입력하세요..."></textarea>
+            <div class="input-group">
+                <label for="idea-input">2. 내용을 입력하거나 파일을 업로드하세요.</label>
+                <textarea id="idea-input" placeholder="여기에 아이디어를 입력하세요..."></textarea>
+            </div>
             <button id="btn-start-analysis">분석 시작</button>
         </div>
         
         <div id="stage-analysis" class="card hidden">
-            <!-- Analysis Report content will be here -->
+            <!-- Analysis Report content will be populated here -->
         </div>
 
         <div id="stage-questions" class="card hidden">
-            <!-- Questions content will be here -->
+            <!-- Questions content will be populated here -->
         </div>
 
         <div id="stage-fusion" class="card hidden">
-            <!-- Fusion Result content will be here -->
+            <!-- Fusion Result content will be populated here -->
         </div>
         
         <div id="loading-spinner" class="spinner hidden"></div>
     </div>
-
-    <!-- External Libraries for file processing -->
-    <script src="https://unpkg.com/docx-preview@0.1.15/dist/docx-preview.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-    <script>
-        // Set worker path for pdf.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
-    </script>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -193,110 +148,262 @@
         }
         const user = JSON.parse(userData);
         document.getElementById('welcome-message').textContent = `${user.userName}님, 환영합니다!`;
-
-        const dropArea = document.getElementById('file-drop-area');
-        const fileInput = document.getElementById('file-upload');
-        const fileNameDisplay = document.getElementById('file-name');
-        const ideaTextarea = document.getElementById('idea-input');
-        const spinner = document.getElementById('loading-spinner');
-
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, preventDefaults, false);
-            document.body.addEventListener(eventName, preventDefaults, false);
-        });
-        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
-
-        ['dragenter', 'dragover'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false));
-        ['dragleave', 'drop'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false));
-        
-        dropArea.addEventListener('drop', handleDrop, false);
-        dropArea.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-        function handleDrop(e) { handleFiles(e.dataTransfer.files); }
-
-        async function handleFiles(files) {
-            if (files.length > 1) {
-                alert("하나의 파일만 업로드할 수 있습니다.");
-                return;
-            }
-            const file = files[0];
-            const validTypes = ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-            if (!validTypes.includes(file.type)) {
-                alert("허용된 파일 형식이 아닙니다. (.txt, .pdf, .docx)");
-                return;
-            }
-
-            fileNameDisplay.textContent = `파일 처리 중: ${file.name}`;
-            spinner.classList.remove('hidden');
-            ideaTextarea.value = '';
-
-            try {
-                let text = '';
-                if (file.type === 'text/plain') {
-                    text = await file.text();
-                } else if (file.type === 'application/pdf') {
-                    text = await extractTextFromPdf(file);
-                } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                    text = await extractTextFromDocx(file);
-                }
-                ideaTextarea.value = text;
-                fileNameDisplay.textContent = `파일 로드 완료: ${file.name}`;
-            } catch (error) {
-                alert(`파일을 읽는 중 오류가 발생했습니다: ${error.message}`);
-                fileNameDisplay.textContent = "파일 처리 실패";
-            } finally {
-                spinner.classList.add('hidden');
-            }
-        }
-        
-        function extractTextFromDocx(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    mammoth.extractRawText({ arrayBuffer: event.target.result })
-                        .then(result => resolve(result.value))
-                        .catch(reject);
-                };
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        async function extractTextFromPdf(file) {
-            const reader = new FileReader();
-            return new Promise((resolve, reject) => {
-                reader.onload = async (event) => {
-                    try {
-                        const pdf = await pdfjsLib.getDocument({ data: event.target.result }).promise;
-                        let textContent = '';
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const text = await page.getTextContent();
-                            textContent += text.items.map(s => s.str).join(' ');
-                        }
-                        resolve(textContent);
-                    } catch (error) {
-                        reject(error);
-                    }
-                };
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(file);
-            });
-        }
     });
 
-    // ... (Your existing analysis logic script should be pasted here)
-    // For example:
-    // let originalIdea = '', aiQuestions = [], ... etc.
-    // document.getElementById('btn-start-analysis').addEventListener(...)
-</script>
+    let originalIdea = '', aiQuestions = [], fusionResultForCopy = '', currentDocType = '';
+    const stages = { input: document.getElementById('stage-input'), analysis: document.getElementById('stage-analysis'), questions: document.getElementById('stage-questions'), fusion: document.getElementById('stage-fusion') };
+    const steps = { 1: document.getElementById('step-1'), 2: document.getElementById('step-2'), 3: document.getElementById('step-3') };
+    const spinner = document.getElementById('loading-spinner');
+    
+    document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
+    // These buttons are inside dynamically generated content, so event listeners will be added later
+    // document.getElementById('btn-show-questions').addEventListener('click', () => revealStage('questions'));
+    // document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
 
-<!-- Placeholder for the rest of your JavaScript logic -->
-<script>
-    // Paste the analysis logic (from handleAnalysisRequest, renderAnalysisReport, etc.) here.
-    // This is separated to keep file handling logic distinct from analysis logic.
+    function updateProgressBar(stageName) {
+        Object.values(steps).forEach(step => step.classList.remove('active'));
+        if (stageName === 'analysis') steps[1].classList.add('active');
+        if (stageName === 'questions') [steps[1], steps[2]].forEach(s => s.classList.add('active'));
+        if (stageName === 'fusion') [steps[1], steps[2], steps[3]].forEach(s => s.classList.add('active'));
+    }
+
+    function revealStage(stageName) {
+        const stageElement = stages[stageName];
+        if (stageElement) {
+            stageElement.classList.remove('hidden');
+            stageElement.classList.add('fade-in');
+            stageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        updateProgressBar(stageName);
+    }
+
+    function finalizeStage(stageName) {
+        const stageElement = stages[stageName];
+        if (stageElement) {
+            stageElement.classList.add('finalized');
+            stageElement.querySelectorAll('button, textarea, select').forEach(el => el.disabled = true);
+        }
+    }
+
+    async function callApi(body) {
+        spinner.classList.remove('hidden');
+        spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        try {
+            const response = await fetch('/api/student', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `Server Error: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') alert('오류: AI 응답 시간이 너무 오래 걸립니다.');
+            else alert(`오류: ${error.message}`);
+            location.reload();
+        } finally {
+            spinner.classList.add('hidden');
+        }
+    }
+
+    async function handleAnalysisRequest() {
+        currentDocType = document.getElementById('doc-type').value;
+        originalIdea = document.getElementById('idea-input').value.trim();
+        if (!originalIdea) return alert('아이디어를 입력해주세요.');
+        
+        finalizeStage('input');
+        
+        const data = await callApi({ stage: 'analyze', docType: currentDocType, idea: originalIdea });
+        
+        if (data) {
+            renderAnalysisReport(data);
+            renderQuestionInputs(data.questions);
+            revealStage('analysis');
+        }
+    }
+
+    async function handleFusionRequest() {
+        const userAnswers = aiQuestions.map((_, i) => document.getElementById(`answer-${i}`).value.trim());
+        if (userAnswers.some(a => a === '')) return alert('모든 질문에 답변해주세요.');
+        
+        finalizeStage('analysis');
+        finalizeStage('questions');
+        
+        const data = await callApi({ stage: 'fuse', originalIdea, answers: userAnswers, docType: currentDocType });
+        
+        if (data) {
+            renderFusionReport(data);
+            revealStage('fusion');
+        }
+    }
+
+    function renderAnalysisReport(data) {
+        const { originalityScore, overallAssessment, judgmentCriteria, plagiarismReport } = data;
+        const analysisStage = stages.analysis;
+
+        let reportHTML = `
+            <h2>1. 독창성 진단 리포트</h2>
+            <div class="analysis-section">
+                <h3>종합 평가</h3>
+                <p>${overallAssessment}</p>
+            </div>
+            <div class="analysis-grid">
+                <div class="gauge-container">
+                    <h3>독창성 점수</h3>
+                     <svg width="200" height="120" viewBox="0 0 200 120">
+                        <defs><linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#D0021B"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#50E3C2"/></linearGradient></defs><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" /><path id="gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#gaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3; transition: stroke-dashoffset 1.2s ease-in-out;"/><text id="gauge-text" x="100" y="95" text-anchor="middle" font-size="28px" font-weight="bold">0%</text>
+                    </svg>
+                </div>
+                <div class="criteria-container">
+                    <h3>판단 기준</h3>
+                    <ul class="criteria-list">
+                        ${judgmentCriteria.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            <div class="analysis-section">
+                <h3>표절 검사 상세 리포트</h3>
+                <div id="plagiarism-report-container"></div>
+            </div>
+            <button id="btn-show-questions-dynamic">질문에 답변하기</button>`;
+
+        analysisStage.innerHTML = reportHTML;
+        
+        document.getElementById('btn-show-questions-dynamic').addEventListener('click', () => revealStage('questions'));
+
+        const gaugeArc = document.getElementById('gauge-arc');
+        const circumference = 251.3;
+        const offset = circumference - (originalityScore / 100) * circumference;
+        gaugeArc.style.strokeDashoffset = offset;
+        animateValue(document.getElementById('gauge-text'), 0, originalityScore, 1200);
+
+        const reportContainer = document.getElementById('plagiarism-report-container');
+        if (plagiarismReport.directPlagiarism && plagiarismReport.directPlagiarism.length > 0) {
+            const directSection = document.createElement('div');
+            directSection.innerHTML = `<h4>텍스트 직접 표절 분석</h4>`;
+            plagiarismReport.directPlagiarism.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'report-item';
+                itemDiv.innerHTML = `
+                    <p><strong>유사 의심 문장:</strong> "${item.similarSentence}"</p>
+                    <p><strong>출처:</strong> ${item.source}</p>
+                    <p><strong>텍스트 유사도:</strong> ${item.similarityScore}%</p>
+                    <div class="similarity-bar-container"><div class="similarity-bar" style="width: ${item.similarityScore}%;"></div></div>
+                `;
+                directSection.appendChild(itemDiv);
+            });
+            reportContainer.appendChild(directSection);
+        }
+
+        if (plagiarismReport.structuralPlagiarism && plagiarismReport.structuralPlagiarism.length > 0) {
+            const structuralSection = document.createElement('div');
+            structuralSection.innerHTML = `<h4 style="margin-top: 30px;">구조적 표절 분석</h4>`;
+            plagiarismReport.structuralPlagiarism.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'report-item';
+                itemDiv.innerHTML = `
+                    <p><strong>유사 논리 구조:</strong> ${item.sourceLogic}</p>
+                    <p><strong>유사 지점:</strong> ${item.pointOfSimilarity}</p>
+                `;
+                structuralSection.appendChild(itemDiv);
+            });
+            reportContainer.appendChild(structuralSection);
+        }
+        
+        if (reportContainer.innerHTML === '') {
+            reportContainer.innerHTML = '<p>표절 의심 항목이 발견되지 않았습니다.</p>';
+        }
+    }
+
+    function renderQuestionInputs(questions) {
+        aiQuestions = questions;
+        const questionsStage = stages.questions;
+        let questionsHTML = `
+            <h2>2. 창의적 도발 질문</h2>
+            <p>AI가 제안한 아래 질문들에 답변하며 아이디어를 확장시켜 보세요.</p>
+            <div id="questions-container-dynamic">
+                ${questions.map((q, index) => `
+                    <div class="question-card">
+                        <label for="answer-${index}">질문 ${index + 1}: ${q}</label>
+                        <textarea id="answer-${index}" placeholder="답변을 입력하세요..."></textarea>
+                    </div>
+                `).join('')}
+            </div>
+            <button id="btn-submit-answers-dynamic">답변 제출 및 융합 아이디어 생성</button>`;
+        questionsStage.innerHTML = questionsHTML;
+        document.getElementById('btn-submit-answers-dynamic').addEventListener('click', handleFusionRequest);
+    }
+
+    function renderFusionReport(data) {
+        const { fusionTitle, fusionSummary, connection, keyFeatures } = data;
+        const fusionStage = stages.fusion;
+        let fusionHTML = `
+            <h2>3. 최종 융합 아이디어 제안</h2>
+            <div class="fusion-summary">
+                <h3 style="color: var(--primary-color);">${fusionTitle}</h3>
+                <p>${fusionSummary}</p>
+            </div>
+            <h3>연결고리 분석</h3>
+            <p>${connection}</p>
+            <div class="fusion-features">
+                <h3>주요 특징</h3>
+                <ul>${keyFeatures.map(f => `<li>${f}</li>`).join('')}</ul>
+            </div>
+            <div class="action-buttons-container">
+                <button id="btn-copy-result-dynamic">결과 텍스트로 복사</button>
+                <div class="feedback-section">
+                    <p>이 제안이 도움이 되었나요?</p>
+                    <div class="feedback-buttons">
+                        <button class="feedback-btn" id="btn-feedback-yes-dynamic">👍</button>
+                        <button class="feedback-btn" id="btn-feedback-no-dynamic">👎</button>
+                    </div>
+                    <p id="feedback-message" style="color: var(--secondary-color); font-weight: bold; margin-top: 10px;"></p>
+                </div>
+            </div>
+            <button id="btn-restart-dynamic">새로운 아이디어 분석하기</button>`;
+        fusionStage.innerHTML = fusionHTML;
+        
+        document.getElementById('btn-copy-result-dynamic').addEventListener('click', handleCopyResult);
+        document.getElementById('btn-feedback-yes-dynamic').addEventListener('click', () => handleFeedback(true));
+        document.getElementById('btn-feedback-no-dynamic').addEventListener('click', () => handleFeedback(false));
+        document.getElementById('btn-restart-dynamic').addEventListener('click', () => location.reload());
+
+        fusionResultForCopy = `## 융합 아이디어: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${keyFeatures.map(f => `- ${f}`).join('\n')}`;
+    }
+
+    function handleCopyResult() {
+        navigator.clipboard.writeText(fusionResultForCopy).then(() => {
+            const btn = document.getElementById('btn-copy-result-dynamic');
+            btn.textContent = '복사 완료!';
+            setTimeout(() => { btn.textContent = '결과 텍스트로 복사'; }, 2000);
+        });
+    }
+
+    function handleFeedback(isHelpful) {
+        document.getElementById('feedback-message').textContent = '피드백을 주셔서 감사합니다!';
+        document.getElementById('btn-feedback-yes-dynamic').disabled = true;
+        document.getElementById('btn-feedback-no-dynamic').disabled = true;
+    }
+    
+    function animateValue(obj, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.textContent = Math.floor(progress * (end - start) + start) + "%";
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    }
 </script>
 </body>
 </html>
+
+
 
