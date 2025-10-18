@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TA/Professor Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.18/mammoth.browser.min.js"></script>
     <style>
         :root {
             --primary-color: #059669; /* 조교/교수용 메인 색상 (Green) */
@@ -57,6 +59,38 @@
             outline: none; 
         }
         
+        /* --- START: 파일 업로드 스타일 --- */
+        #drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: var(--text-light);
+            background-color: #F9FAFB;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        #drop-zone.drag-over {
+            background-color: #EFF6FF;
+            border-color: var(--primary-color);
+        }
+        #file-input {
+            display: none; /* 숨김 처리 */
+        }
+        #file-status {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 15px;
+            text-align: center;
+        }
+        .or-divider {
+            text-align: center;
+            color: var(--text-light);
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        /* --- END: 파일 업로드 스타일 --- */
+
         button { 
             display: block; 
             width: 100%; 
@@ -85,7 +119,7 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* 결과물 섹션 */
+        /* (이하 기존 스타일 동일) */
         h3 { 
             font-size: 1.4em; 
             color: var(--text-dark); 
@@ -112,15 +146,13 @@
         .report-output strong {
              color: var(--primary-color);
         }
-
-        /* --- START: SIMILARITY CARD STYLES --- */
         #result-similar-phrases {
-            list-style-type: none; /* 기본 리스트 스타일 제거 */
+            list-style-type: none;
             padding-left: 0;
         }
         #result-similar-phrases li.similarity-card {
-            border: 1px solid #FCD34D; /* 경고 테두리 */
-            background-color: #FFFBEB; /* 경고 배경 */
+            border: 1px solid #FCD34D;
+            background-color: #FFFBEB;
             border-radius: 8px;
             padding: 15px 20px;
             margin-bottom: 15px;
@@ -132,29 +164,28 @@
             margin-bottom: 12px;
             font-weight: 500;
             font-size: 1.1em;
-            border-left: 4px solid var(--warning-color); /* 좌측 강조선 */
+            border-left: 4px solid var(--warning-color);
             padding-left: 10px;
-            word-break: keep-all; /* 문구가 잘리지 않도록 */
+            word-break: keep-all;
         }
         .suspicious-details {
             font-size: 0.95em;
             color: var(--text-light);
             line-height: 1.6;
-            padding-left: 14px; /* 인용구와 맞춤 */
+            padding-left: 14px;
         }
         .suspicious-details strong {
-            color: #D97706; /* 경고 텍스트 (다크) */
+            color: #D97706;
             font-weight: 600;
         }
         .suspicious-details a {
-            color: #059669; /* TA 기본 색상 */
+            color: #059669;
             text-decoration: underline;
-            word-break: break-all; /* 긴 URL이 카드를 뚫지 않도록 */
+            word-break: break-all;
         }
         .suspicious-details a:hover {
             color: #047857;
         }
-        /* --- END: SIMILARITY CARD STYLES --- */
 
     </style>
 </head>
@@ -168,8 +199,19 @@
 
         <div id="stage-input" class="card">
             <h2>리포트 입력</h2>
-            <p>학생의 리포트 본문을 여기에 붙여넣으세요.</p>
+            
+            <input type="file" id="file-input" accept=".pdf, .docx">
+            <div id="drop-zone">
+                여기에 PDF 또는 .docx 파일을 드래그 앤 드롭하세요
+                <br>또는 클릭하여 파일 선택
+            </div>
+            <p id="file-status"></p>
+
+            <div class="or-divider">또는</div>
+
+            <p>텍스트를 직접 붙여넣으세요.</p>
             <textarea id="report-input" placeholder="학생 리포트 내용..."></textarea>
+            
             <button id="btn-start-assessment">평가 초안 생성</button>
         </div>
         
@@ -187,13 +229,13 @@
                 <h3>독창성 평가 (초안)</h3>
                 <p id="result-originality-draft"></p>
                 <ul id="result-key-points">
-                    </ul>
+                </ul>
             </div>
             
             <div class="report-output" style="margin-top: 20px; background-color: #F9FAFB;">
                 <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3>
                 <ul id="result-similar-phrases">
-                    </ul>
+                </ul>
             </div>
 
             <button id="btn-restart" style="margin-top: 30px; background: #6B7280;">새 리포트 분석</button>
@@ -209,11 +251,110 @@
     const btnRestart = document.getElementById('btn-restart');
     const spinner = document.getElementById('loading-spinner');
 
-    // --- Event Listeners ---
+    // --- (신규) 파일 입력 Elements ---
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileStatus = document.getElementById('file-status');
+    // PDF.js worker 설정
+    if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+    }
+
+    // --- (신규) 파일 이벤트 리스너 ---
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileSelect);
+    
+    // 드래그 앤 드롭 이벤트
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault(); // 기본 이벤트 방지
+        dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+    });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files; // 드롭된 파일을 input에 할당
+            handleFileSelect(); // 파일 처리 함수 호출
+        }
+    });
+
+    // --- (신규) 파일 처리 함수 ---
+    async function handleFileSelect() {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        fileStatus.textContent = `"${file.name}" 읽는 중...`;
+        reportInput.value = ''; // 텍스트 영역 초기화
+
+        try {
+            let text = '';
+            if (file.type === 'application/pdf') {
+                text = await extractPdfText(file);
+            } else if (file.name.endsWith('.docx')) {
+                text = await extractDocxText(file);
+            } else {
+                throw new Error('지원하지 않는 파일 형식입니다 (.pdf 또는 .docx).');
+            }
+            reportInput.value = text;
+            fileStatus.textContent = `✅ "${file.name}" 읽기 완료. 텍스트가 아래에 삽입되었습니다.`;
+        } catch (error) {
+            console.error('File parsing error:', error);
+            fileStatus.textContent = `❌ 파일 읽기 실패: ${error.message}`;
+            alert(`파일을 읽는 데 실패했습니다: ${error.message}`);
+        }
+    }
+
+    // (신규) .docx 텍스트 추출
+    function extractDocxText(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const arrayBuffer = e.target.result;
+                mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                    .then(result => resolve(result.value))
+                    .catch(reject);
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // (신규) .pdf 텍스트 추출
+    async function extractPdfText(file) {
+        const reader = new FileReader();
+        return new Promise((resolve, reject) => {
+            reader.onload = async (e) => {
+                const arrayBuffer = e.target.result;
+                try {
+                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                    const pdf = await loadingTask.promise;
+                    let fullText = '';
+                    
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).join(' ');
+                        fullText += pageText + '\n\n'; // 페이지별로 줄바꿈
+                    }
+                    resolve(fullText);
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // --- (기존) 이벤트 리스너 ---
     btnStart.addEventListener('click', handleAssessmentRequest);
     btnRestart.addEventListener('click', () => location.reload());
 
-    // --- API Call Logic (TA용) ---
+    // --- (기존) API Call Logic (TA용) ---
     async function callApi(body) {
         spinner.classList.remove('hidden');
         spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -221,10 +362,10 @@
         reportInput.disabled = true;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초
+        const timeoutId = setTimeout(() => controller.abort(), 30000); 
 
         try {
-            const response = await fetch('/api/ta', { 
+            const response = await fetch('/api/ta', { // 백엔드 URL은 변경 없음
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -250,17 +391,17 @@
         }
     }
 
-    // --- Step 1: Assessment Request ---
+    // --- (기존) Step 1: Assessment Request ---
     async function handleAssessmentRequest() {
         const reportText = reportInput.value.trim();
         if (!reportText) {
-            alert('리포트 내용을 입력해주세요.');
+            alert('리포트 내용을 입력하거나 파일을 업로드해주세요.');
             return;
         }
         
         const data = await callApi({ 
             stage: 'assess_report', 
-            reportText: reportText 
+            reportText: reportText // 텍스트만 전송
         });
         
         if (data) {
@@ -274,7 +415,7 @@
         }
     }
 
-    // --- Step 2: Render Report (수정됨) ---
+    // --- (기존) Step 2: Render Report (URL 렌더링 로직 포함) ---
     function renderAssessmentReport(data) {
         const { summary, originalityDraft, keyStrengths, areasForImprovement, similarPhrases } = data;
 
@@ -287,39 +428,35 @@
         if (keyStrengths) {
             keyStrengths.forEach(point => {
                 const li = document.createElement('li');
-                li.innerHTML = `<strong>[강점]</strong> ${point}`;
+                li.innerHTML = `<strong>[강점]</strong> ${escapeHTML(point)}`;
                 keyPointsList.appendChild(li);
             });
         }
         if (areasForImprovement) {
             areasForImprovement.forEach(point => {
                 const li = document.createElement('li');
-                li.innerHTML = `<strong>[개선점]</strong> ${point}`;
+                li.innerHTML = `<strong>[개선점]</strong> ${escapeHTML(point)}`;
                 keyPointsList.appendChild(li);
             });
         }
 
-        // --- (수정) : 상세 유사성 카드 렌더링 (URL 포함) ---
+        // 상세 유사성 카드 렌더링 (URL 포함)
         const similarList = document.getElementById('result-similar-phrases');
-        similarList.innerHTML = ''; // 리스트 초기화
+        similarList.innerHTML = ''; 
         
         if (similarPhrases && similarPhrases.length > 0) {
             similarPhrases.forEach(item => {
                 const li = document.createElement('li');
-                li.className = 'similarity-card'; // CSS 클래스 적용
+                li.className = 'similarity-card'; 
                 
                 // URL을 처리하는 로직
                 let urlHTML = '';
                 if (item.sourceURL && item.sourceURL.startsWith('http')) {
-                    // 유효한 URL이면 링크 생성
-                    urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank" rel="noopener noreferrer">${item.sourceURL}</a>`;
+                    urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceURL)}</a>`;
                 } else if (item.sourceURL && item.sourceURL !== 'N/A') {
-                    // URL은 아니지만 'N/A'도 아닌 텍스트 정보
-                    urlHTML = `<br><strong>추정 URL:</strong> ${item.sourceURL}`;
+                    urlHTML = `<br><strong>추정 URL:</strong> ${escapeHTML(item.sourceURL)}`;
                 }
-                // 'N/A'인 경우 아무것도 표시하지 않음
 
-                // HTML 구조로 상세 정보 삽입
                 li.innerHTML = `
                     <p class="suspicious-phrase">"${escapeHTML(item.phrase)}"</p>
                     <div class="suspicious-details">
@@ -331,10 +468,8 @@
                 similarList.appendChild(li);
             });
         } else {
-            // 유사 문구가 없을 경우
             similarList.innerHTML = '<li style="list-style-type: none; color: #6B7280;">엄격한 기준(직접 인용, 최소 변경)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
         }
-        // --- (수정 완료) ---
     }
     
     /**
