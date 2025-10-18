@@ -69,7 +69,6 @@
         }
         .file-drop-area.dragover { background-color: #EFF6FF; border-color: var(--primary-color); }
         .file-drop-area input[type="file"] { display: none; }
-        .file-drop-area .file-msg { cursor: pointer; }
         #file-name { font-weight: bold; color: var(--secondary-color); margin-top: 10px; }
         .divider-or { text-align: center; font-weight: bold; color: var(--text-light); margin: 20px 0; position: relative; }
         .divider-or::before, .divider-or::after { content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background-color: var(--border-color); }
@@ -102,7 +101,6 @@
         
         .report-item { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
         .report-item p { margin: 5px 0; line-height: 1.6; }
-        .report-item strong { color: var(--text-dark); }
         .similarity-bar-container { width: 100%; background-color: var(--border-color); border-radius: 5px; height: 10px; margin-top: 10px; overflow: hidden; }
         .similarity-bar { background-color: var(--warning-color); height: 100%; border-radius: 5px; transition: width 1s ease-in-out; }
         
@@ -118,15 +116,29 @@
         .question-card label { font-weight: bold; display: block; margin-bottom: 10px; }
         .question-card textarea { min-height: 80px; }
 
-        .fusion-summary { background-color: #EFF6FF; border-left: 5px solid var(--primary-color); padding: 20px; border-radius: 8px; margin-bottom: 20px;}
-        .fusion-features ul { list-style-type: none; padding-left: 0; }
-        .fusion-features li { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0_0_24_24" fill="none" stroke="%2310B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>') no-repeat left center; padding-left: 30px; margin-bottom: 15px; line-height: 1.5; }
+        /* --- NEW: Fusion Stage Styles --- */
+        .fusion-analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .analysis-item { background-color: #EFF6FF; padding: 20px; border-radius: 8px; }
+        .analysis-item h4 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid #BFDBFE; padding-bottom: 8px; }
+        .analysis-item p { font-size: 0.95em; line-height: 1.6; }
+
+        .diff-container { margin-top: 20px; }
+        .diff-item { border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+        .diff-header { padding: 10px 15px; font-weight: bold; color: var(--text-light); background-color: var(--bg-color); border-bottom: 1px solid var(--border-color); }
+        .diff-content { display: grid; grid-template-columns: 1fr; }
+        .diff-box { padding: 15px; line-height: 1.7; font-size: 0.95em; }
+        .diff-box.before { background-color: #FEF2F2; }
+        .diff-box.after { background-color: #ECFDF5; }
         
         .action-buttons-container { margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; }
-        #btn-copy-result { background: var(--secondary-color); margin-bottom: 20px; }
         .feedback-section { text-align: center; }
         .feedback-buttons { display: flex; justify-content: center; gap: 15px; }
         .feedback-btn { width: 80px; padding: 10px; font-size: 24px; background: none; border: 2px solid var(--border-color); border-radius: 50px; margin: 0; }
+        
+        @media (min-width: 768px) {
+            .diff-content { grid-template-columns: 1fr 1fr; }
+            .diff-box.before { border-right: 1px solid var(--border-color); }
+        }
     </style>
 </head>
 <body>
@@ -138,16 +150,12 @@
         </div>
 
         <div class="progress-bar">
-            <div class="step active" id="step-1"><div class="dot"></div>아이디어 진단</div>
-            <div class="step" id="step-2"><div class="dot"></div>창의적 도발</div>
-            <div class="step" id="step-3"><div class="dot"></div>융합 아이디어</div>
+            <div class="step active" id="step-1"><div class="dot"></div>글 입력</div>
+            <div class="step" id="step-2"><div class="dot"></div>심층 분석</div>
+            <div class="step" id="step-3"><div class="dot"></div>최종 제안</div>
         </div>
         
-        <div id="error-message-container" class="card error-message hidden">
-            <h4>분석 실패</h4>
-            <p id="error-text"></p>
-            <button id="btn-retry">다시 시도하기</button>
-        </div>
+        <div id="error-message-container" class="card error-message hidden"></div>
 
         <div id="stage-input" class="card">
             <h2>글 입력</h2>
@@ -168,16 +176,15 @@
         <div id="loading-spinner" class="spinner hidden"></div>
     </div>
     
-    <!-- External Libraries for file processing -->
     <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
     </script>
-
-    <!-- All logic is now in student-app.js -->
     <script src="student-app.js" type="module"></script>
 
 </body>
 </html>
+
+
 
