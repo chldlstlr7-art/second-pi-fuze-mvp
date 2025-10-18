@@ -249,7 +249,11 @@ function renderAnalysisReport(data) {
 
     const reportContainer = document.getElementById('plagiarism-report-container');
     reportContainer.innerHTML = ''; // Clear previous report
+
     if (plagiarismReport.directPlagiarism && plagiarismReport.directPlagiarism.length > 0) {
+        // Sort by score, descending
+        plagiarismReport.directPlagiarism.sort((a, b) => b.similarityScore - a.similarityScore);
+
         const directSection = document.createElement('div');
         directSection.innerHTML = `<h4>텍스트 직접 표절 분석</h4>`;
         plagiarismReport.directPlagiarism.forEach(item => {
@@ -267,6 +271,10 @@ function renderAnalysisReport(data) {
     }
 
     if (plagiarismReport.structuralPlagiarism && plagiarismReport.structuralPlagiarism.length > 0) {
+        const levelOrder = { '매우 높음': 6, '높음': 5, '주의': 4, '보통': 3, '낮음': 2, '매우 낮음': 1 };
+        // Sort by level, descending
+        plagiarismReport.structuralPlagiarism.sort((a, b) => (levelOrder[b.similarityLevel] || 0) - (levelOrder[a.similarityLevel] || 0));
+        
         const structuralSection = document.createElement('div');
         structuralSection.innerHTML = `<h4 style="margin-top: 30px;">구조적 표절 분석</h4>`;
         plagiarismReport.structuralPlagiarism.forEach(item => {
@@ -335,15 +343,15 @@ function renderFusionReport(data) {
         <div class="analysis-section">
             <h3>핵심 분석 요약</h3>
             <div class="fusion-analysis-grid">
-                <div class="analysis-item">
+                <div class="analysis-item original">
                     <h4>기존 내용</h4>
                     <p>${analysis.originalSummary}</p>
                 </div>
-                <div class="analysis-item">
+                <div class="analysis-item change">
                     <h4>핵심 변경점</h4>
                     <p>${analysis.keyChange}</p>
                 </div>
-                <div class="analysis-item">
+                <div class="analysis-item conclusion">
                     <h4>결론</h4>
                     <p>${analysis.conclusion}</p>
                 </div>
