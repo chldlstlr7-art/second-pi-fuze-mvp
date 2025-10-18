@@ -159,7 +159,7 @@ async function callApi(body) {
     spinner.classList.remove('hidden');
     spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
     try {
         const response = await fetch('/api/student', { 
             method: 'POST',
