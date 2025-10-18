@@ -6,7 +6,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 3. AI 모델 설정
 const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash-latest", 
+    model: "gemini-2.5-flash", 
 });
 
 // --- 프롬프트 엔지니어링 (JSON 출력 강화) ---
