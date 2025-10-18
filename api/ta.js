@@ -12,18 +12,17 @@ const model = genAI.getGenerativeModel({
 
 // --- 프롬프트 엔지니어링 (조교/교수용) ---
 
-// [3단계] 조교/교수용: 리포트 평가 프롬프트 (유사성 분석 기준 완화 및 URL 요청)
+// [3단계] 조교/교수용: 리포트 평가 프롬프트 (유사성 분석 기준 '엄격하게' 수정)
 const promptForStep3_TA = `
 You are an expert academic Teaching Assistant (TA). Your goal is to analyze a student's report and provide a draft assessment for the professor.
 Be objective, constructive, and concise. Respond in Korean.
 
-**Similarity Analysis Rules (Important - Be 'Generous'):**
-For the 'similarPhrases' section, adopt a *broader (more 'generous')* standard. 
-This includes not just direct overlaps, but also:
-1.  Closely paraphrased sentences that follow the original source's structure.
-2.  Standard definitions or common knowledge presented as if it were the user's own insight (lack of citation).
-3.  Argument structures that seem directly borrowed from a specific source.
-The goal is to flag areas for *review*, not just confirm plagiarism.
+**Similarity Analysis Rules (Important - Be 'Strict'):**
+For the 'similarPhrases' section, adopt a *very strict (깐깐한)* standard. 
+Focus *only* on high-confidence matches that strongly suggest a lack of originality. This includes:
+1.  Direct word-for-word plagiarism (문자 그대로 복사-붙여넣기).
+2.  Sentences that are only minimally changed (e.g., only a few words swapped or reordered).
+*Do NOT* flag common knowledge, standard definitions (unless copied verbatim without quotes), or properly paraphrased arguments.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
@@ -43,10 +42,10 @@ The goal is to flag areas for *review*, not just confirm plagiarism.
   ],
   "similarPhrases": [
     {
-      "phrase": "<The specific suspicious phrase from the student's report.>",
-      "likelySource": "<Name of the source (e.g., '위키피디아 [토픽] 항목', '특정 논문 제목', '일반적인 교과서 정의').>",
+      "phrase": "<The specific phrase from the student's report that meets the 'Strict' criteria.>",
+      "likelySource": "<Name of the specific source (e.g., '위키피디아 [토픽] 항목', '특정 논문 제목').>",
       "sourceURL": "<A *possible* URL if it's a well-known public source (e.g., 'https://ko.wikipedia.org/wiki/Topic'). If not applicable or unknown, state 'N/A'.>",
-      "similarityType": "<Explain *how* it's similar based on the 'Generous' rules (e.g., '표준 정의를 출처 표기 없이 그대로 인용함', '특정 자료의 문장 구조와 매우 흡사하게 의역됨', '소스의 핵심 논리를 거의 그대로 차용함').>"
+      "similarityType": "<Explain *how* it's similar based on the 'Strict' rules (e.g., '특정 소스의 문장과 단어 몇 개만 다르고 동일함', '출처 표기 없이 원문을 그대로 복사함').>"
     }
   ]
 }
