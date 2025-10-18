@@ -9,7 +9,8 @@
     <style>
         :root {
             --primary-color: #059669; /* 조교/교수용 메인 색상 (Green) */
-            --warning-color: #F59E0B; /* 경고/유사성 색상 */
+            --warning-color: #F59E0B; /* 의역 표절 (Amber) */
+            --danger-color: #EF4444;  /* 단순 복제 (Red) */
             --bg-color: #F8FAFC;
             --card-bg: #FFFFFF;
             --text-dark: #1F2937;
@@ -193,18 +194,49 @@
             margin-top: 0;
         }
 
-        /* 유사성 검토 스타일 (변경 없음) */
-        #result-similar-phrases {
+        /* --- (수정) 유사성 검토 스타일 --- */
+        
+        /* (신규) 유사성 소제목 */
+        .similarity-subtitle {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: var(--text-dark);
+            margin-top: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        /* 공통 리스트 스타일 */
+        .similarity-list {
             list-style-type: none;
             padding-left: 0;
+            margin-top: 0;
         }
-        #result-similar-phrases li.similarity-card {
-            border: 1px solid #FCD34D;
-            background-color: #FFFBEB;
+        .similarity-list li.no-result {
+            list-style-type: none;
+            color: var(--text-light);
+        }
+
+        /* 공통 카드 스타일 */
+        .similarity-card {
             border-radius: 8px;
             padding: 15px 20px;
             margin-bottom: 15px;
         }
+        
+        /* (수정) 의역 표절 카드 (Amber) */
+        .similarity-card.type-paraphrase {
+            border: 1px solid #FCD34D;
+            background-color: #FFFBEB;
+        }
+
+        /* (신규) 단순 복제 카드 (Red) */
+        .similarity-card.type-copy-paste {
+            border: 1px solid #FCA5A5; /* Red border */
+            background-color: #FEF2F2; /* Red background */
+        }
+
         .suspicious-phrase {
             font-style: italic;
             color: var(--text-dark);
@@ -212,20 +244,37 @@
             margin-bottom: 12px;
             font-weight: 500;
             font-size: 1.1em;
-            border-left: 4px solid var(--warning-color);
             padding-left: 10px;
             word-break: keep-all;
         }
+        
+        /* (수정) 의역 표절 카드 강조선 */
+        .similarity-card.type-paraphrase .suspicious-phrase {
+             border-left: 4px solid var(--warning-color);
+        }
+        /* (신규) 단순 복제 카드 강조선 */
+         .similarity-card.type-copy-paste .suspicious-phrase {
+             border-left: 4px solid var(--danger-color);
+        }
+
         .suspicious-details {
             font-size: 0.95em;
             color: var(--text-light);
             line-height: 1.6;
             padding-left: 14px;
         }
-        .suspicious-details strong {
-            color: #D97706;
+        
+        /* (수정) 의역 표절 카드 텍스트 */
+        .similarity-card.type-paraphrase .suspicious-details strong {
+            color: #D97706; /* Amber-dark */
             font-weight: 600;
         }
+        /* (신규) 단순 복제 카드 텍스트 */
+        .similarity-card.type-copy-paste .suspicious-details strong {
+            color: #B91C1C; /* Red-dark */
+            font-weight: 600;
+        }
+
         .suspicious-details a {
             color: #059669;
             text-decoration: underline;
@@ -247,39 +296,32 @@
 
         <div id="stage-input" class="card">
             <h2>리포트 파일 업로드</h2>
-            
             <input type="file" id="file-input" accept=".pdf, .docx" multiple>
             <div id="drop-zone">
                 여기에 PDF 또는 .docx 파일들을 드래그 앤 드롭하세요
                 <br>또는 클릭하여 파일 선택
             </div>
-            
             <div id="file-list-container">
                 <ul id="file-list">
-                    </ul>
+                </ul>
             </div>
-            
             <button id="btn-start-assessment">선택된 파일 분석 시작</button>
         </div>
         
         <div id="stage-result" class="hidden">
-            </div>
+        </div>
 
         <button id="btn-restart" class="hidden" style="margin-top: 30px; background: #6B7280;">새 리포트 분석</button>
 
     </div>
 
 <script>
-    // --- 글로벌 상태 ---
+    // --- 글로벌 상태, DOM Elements (변경 없음) ---
     let filesToAnalyze = []; 
-
-    // --- DOM Elements ---
     const inputStage = document.getElementById('stage-input');
     const resultStage = document.getElementById('stage-result');
     const btnStart = document.getElementById('btn-start-assessment');
     const btnRestart = document.getElementById('btn-restart');
-
-    // --- 파일 입력 Elements ---
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const fileList = document.getElementById('file-list');
@@ -288,18 +330,11 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
     }
 
-    // --- 파일 이벤트 리스너 ---
+    // --- 파일 이벤트 리스너 (변경 없음) ---
     dropZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFileSelect);
-    
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault(); 
-        dropZone.classList.add('drag-over');
-    });
-    dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-    });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropZone.classList.remove('drag-over');
@@ -309,18 +344,15 @@
         }
     });
 
-    // --- 다중 파일 처리 함수 ---
+    // --- 파일 처리 함수들 (변경 없음) ---
     async function handleFileSelect() {
         const files = fileInput.files;
         if (!files || files.length === 0) return;
-
         filesToAnalyze = []; 
         fileList.innerHTML = `<li><span class="status-text">${files.length}개 파일 읽는 중...</span></li>`;
-
         const extractionPromises = Array.from(files).map(processFile);
         const results = await Promise.all(extractionPromises);
         filesToAnalyze = results; 
-        
         fileList.innerHTML = ''; 
         filesToAnalyze.forEach(file => {
             const li = document.createElement('li');
@@ -335,7 +367,6 @@
         });
     }
 
-    // 단일 파일 처리 헬퍼 함수
     async function processFile(file) {
         try {
             let text = '';
@@ -353,7 +384,6 @@
         }
     }
 
-    // .docx 텍스트 추출
     function extractDocxText(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -368,7 +398,6 @@
         });
     }
 
-    // .pdf 텍스트 추출
     async function extractPdfText(file) {
         const reader = new FileReader();
         return new Promise((resolve, reject) => {
@@ -378,12 +407,11 @@
                     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
                     const pdf = await loadingTask.promise;
                     let fullText = '';
-                    
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const textContent = await page.getTextContent();
                         const pageText = textContent.items.map(item => item.str).join(' ');
-                        fullText += pageText + '\n\n'; // 페이지별로 줄바꿈
+                        fullText += pageText + '\n\n'; 
                     }
                     resolve(fullText);
                 } catch (error) {
@@ -395,11 +423,10 @@
         });
     }
 
-    // --- 범용 API 호출 함수 ---
+    // --- 범용 API 호출 함수 (변경 없음) ---
     async function callApiEndpoint(url, body) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2분 타임아웃
-
         try {
             const response = await fetch(url, { 
                 method: 'POST',
@@ -407,9 +434,7 @@
                 body: JSON.stringify(body),
                 signal: controller.signal
             });
-            
             clearTimeout(timeoutId);
-
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
                 throw new Error(errData.error || `서버 오류: ${response.statusText}`);
@@ -424,11 +449,11 @@
         }
     }
 
-    // --- 이벤트 리스너 ---
+    // --- 이벤트 리스너 (변경 없음) ---
     btnStart.addEventListener('click', handleAssessmentRequest);
     btnRestart.addEventListener('click', () => location.reload());
 
-    // --- 다중 파일 병렬 분석 요청 핸들러 ---
+    // --- 다중 파일 병렬 분석 요청 핸들러 (변경 없음) ---
     async function handleAssessmentRequest() {
         const validFiles = filesToAnalyze.filter(f => !f.error && f.text);
         
@@ -439,7 +464,7 @@
         
         inputStage.classList.add('hidden');
         resultStage.classList.remove('hidden');
-        resultStage.innerHTML = ''; // 결과 영역 초기화
+        resultStage.innerHTML = ''; 
         btnRestart.classList.remove('hidden');
         btnStart.disabled = true;
 
@@ -491,7 +516,7 @@
         }
     }
 
-    // --- HTML 렌더링 헬퍼 함수 ---
+    // --- (신규) HTML 렌더링 헬퍼 함수 ---
 
     function renderSummaryHtml(data) {
         return `
@@ -502,7 +527,7 @@
         `;
     }
 
-    // --- (수정) 점수/평가 렌더링 함수 (오류 수정) ---
+    // (오류 수정됨) 점수/평가 렌더링 함수
     function renderEvaluationHtml(data) {
         const { overallScore, originalityDraft } = data;
 
@@ -526,13 +551,15 @@
         `;
     }
 
-    // --- (수정) 유사성 렌더링 함수 (기준 문구 변경) ---
+    // --- (수정) 유사성 렌더링 함수 (2개 섹션 분리) ---
     function renderSimilarityHtml(data) {
-        const { similarPhrases } = data;
-        let similarListHtml = '';
+        const { paraphrasingPlagiarism, copyPastePlagiarism } = data;
+        let paraphraseHtml = '';
+        let copyPasteHtml = '';
 
-        if (similarPhrases && similarPhrases.length > 0) {
-            similarListHtml = similarPhrases.map(item => {
+        // 1. 의역 표절 (Amber)
+        if (paraphrasingPlagiarism && paraphrasingPlagiarism.length > 0) {
+            paraphraseHtml = paraphrasingPlagiarism.map(item => {
                 let urlHTML = '';
                 if (item.sourceURL && item.sourceURL.startsWith('http')) {
                     urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceURL)}</a>`;
@@ -541,7 +568,7 @@
                 }
                 
                 return `
-                    <li class="similarity-card">
+                    <li class="similarity-card type-paraphrase">
                         <p class="suspicious-phrase">"${escapeHTML(item.phrase)}"</p>
                         <div class="suspicious-details">
                             <strong>유사 출처 (추정):</strong> ${escapeHTML(item.likelySource)}
@@ -552,15 +579,51 @@
                 `;
             }).join('');
         } else {
-            // (수정) '엄격한 기준'으로 문구 변경
-            similarListHtml = '<li style="list-style-type: none; color: #6B7280;">엄격한 기준(직접 인용, 최소 변경)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
+            paraphraseHtml = '<li class="no-result">해당 없음</li>';
         }
 
+        // 2. 단순 복제 표절 (Red)
+        if (copyPastePlagiarism && copyPastePlagiarism.length > 0) {
+            copyPasteHtml = copyPastePlagiarism.map(item => {
+                let urlHTML = '';
+                if (item.sourceURL && item.sourceURL.startsWith('http')) {
+                    urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceURL)}</a>`;
+                } else if (item.sourceURL && item.sourceURL !== 'N/A') {
+                    urlHTML = `<br><strong>추정 URL:</strong> ${escapeHTML(item.sourceURL)}`;
+                }
+                
+                return `
+                    <li class="similarity-card type-copy-paste">
+                        <p class="suspicious-phrase">"${escapeHTML(item.phrase)}"</p>
+                        <div class="suspicious-details">
+                            <strong>유사 출처 (추정):</strong> ${escapeHTML(item.likelySource)}
+                            ${urlHTML} 
+                            <br><strong>유사성 유형:</strong> ${escapeHTML(item.similarityType)}
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        } else {
+            copyPasteHtml = '<li class="no-result">해당 없음</li>';
+        }
+
+        // --- 두 섹션을 조합하여 최종 HTML 반환 ---
         return `
             <div class="report-output" style="background-color: #F9FAFB;">
                 <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3>
-                <ul id="result-similar-phrases">
-                    ${similarListHtml}
+                
+                <h4 class="similarity-subtitle" style="color: var(--warning-color);">
+                    1. 의역 표절 (아이디어/개념 도용)
+                </h4>
+                <ul class="similarity-list">
+                    ${paraphraseHtml}
+                </ul>
+
+                <h4 class="similarity-subtitle" style="color: var(--danger-color); margin-top: 30px;">
+                    2. 단순 복제 표절 (텍스트 복사)
+                </h4>
+                <ul class="similarity-list">
+                    ${copyPasteHtml}
                 </ul>
             </div>
         `;
@@ -582,7 +645,8 @@
      */
     function escapeHTML(str) {
         if (!str) return '';
-        return str.replace(/[&<>"']/g, function(match) {
+        // (수정) str이 숫자인 경우 문자열로 변환하여 오류 방지
+        return String(str).replace(/[&<>"']/g, function(match) {
             return {
                 '&': '&amp;',
                 '<': '&lt;',
