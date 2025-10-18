@@ -16,7 +16,7 @@ const model = genAI.getGenerativeModel({
 const promptForStep1 = `
 Analyze the user's idea. Provide a balanced report in JSON format.
 Find a real-world parallel and highlight similarities and differences.
-Be concise and fast.
+Be concise, in korean.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
