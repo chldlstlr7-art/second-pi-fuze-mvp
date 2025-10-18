@@ -163,7 +163,7 @@
         const userData = localStorage.getItem('pi-fuze-user');
         if (!userData) {
             alert('로그인이 필요합니다.');
-            window.location.href = './index.html';
+            window.location.href = '/';
             return;
         }
         const user = JSON.parse(userData);
