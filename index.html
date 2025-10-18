@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PI-Fuze MVP</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background-color: #f9f9f9; }
+        h1 { color: #333; text-align: center; }
+        textarea { width: 100%; height: 200px; box-sizing: border-box; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 10px; }
+        button { width: 100%; padding: 15px; background-color: #007aff; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        button:disabled { background-color: #ccc; }
+        #results { margin-top: 20px; background-color: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; white-space: pre-wrap; line-height: 1.6; }
+        .loading { text-align: center; font-style: italic; color: #777; }
+    </style>
+</head>
+<body>
+    <h1>PI-Fuze (MVP)</h1>
+    <p>분석하고 싶은 아이디어나 리포트 초안을 입력하세요. PI-Fuze AI-TA가 구조적 복제 위험을 진단하고 개선 방향을 제안합니다.</p>
+    <textarea id="ideaInput" placeholder="여기에 아이디어를 입력하세요..."></textarea>
+    <button id="submitButton" onclick="analyzeIdea()">분석 시작</button>
+    <div id="results"></div>
+    <script>
+        async function analyzeIdea() {
+            const ideaText = document.getElementById('ideaInput').value;
+            const submitButton = document.getElementById('submitButton');
+            const resultsDiv = document.getElementById('results');
+            if (!ideaText.trim()) { alert('아이디어를 입력해주세요.'); return; }
+            submitButton.disabled = true;
+            submitButton.innerText = '분석 중...';
+            resultsDiv.innerHTML = '<p class="loading">AI-TA가 아이디어를 분석 중입니다. 잠시만 기다려주세요...</p>';
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idea: ideaText }),
+                });
+                if (!response.ok) { throw new Error(`서버 오류: ${response.statusText}`); }
+                const data = await response.json();
+                let formattedResult = data.analysis
+                                        .replace(/## (.*)/g, '<h3>$1</h3>')
+                                        .replace(/### (.*)/g, '<h4>$1</h4>')
+                                        .replace(/\* (.*)/g, '<li>$1</li>')
+                                        .replace(/(\<li>.*<\/li>)/gs, '<ul>$1</ul>');
+                resultsDiv.innerHTML = formattedResult;
+            } catch (error) {
+                console.error('분석 실패:', error);
+                resultsDiv.innerHTML = `<p style="color: red;">분석 중 오류가 발생했습니다: ${error.message}</p>`;
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerText = '분석 시작';
+            }
+        }
+    </script>
+</body>
+</html>
