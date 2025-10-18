@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
 
         // 5. Gemini 모델을 설정합니다. (시스템 프롬프트 포함)
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash-latest", // 강력한 최신 모델
+            model: "gemini-2.5-flash", // 강력한 최신 모델
             systemInstruction: systemPrompt,
         });
 
