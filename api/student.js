@@ -29,7 +29,7 @@ Then, provide a detailed analysis. Be extremely fast and concise. Output JSON in
 
 **Structural Plagiarism Rule (Crucial):**
 - Do NOT flag generic writing formats (e.g., 'compare/contrast essay').
-- You should only report structural plagiarism if the SUBSTANTIVE LOGICAL FLOW within the SAME OR A VERY SIMILAR TOPIC is nearly identical to a specific source.
+- You should only report structural plagiarism if the SUBSTANTIVE LOGICAL FLOW (e.g., argument-evidence-conclusion) within the SAME OR A VERY SIMILAR TOPIC is nearly identical to a specific source.
 
 **JSON OUTPUT RULES:**
 - Respond with a VALID JSON object without any markdown wrappers.
@@ -45,7 +45,7 @@ Then, provide a detailed analysis. Be extremely fast and concise. Output JSON in
 }
 `;
 
-// [작업 2] 텍스트 표절 분석 프롬프트 (수정됨)
+// [작업 2] 텍스트 표절 분석 프롬프트
 const promptForTextualAnalysis = `
 You are a plagiarism detection specialist. Your ONLY task is to analyze the user's text for direct textual similarities from your internal knowledge.
 Be extremely fast and concise. Output JSON in Korean.
@@ -53,7 +53,7 @@ Be extremely fast and concise. Output JSON in Korean.
 **Rules:**
 - ONLY find sentences that appear to be copied without attribution ('plagiarismSuspicion').
 - For each suspicion, you MUST include both the 'userSentence' (from the user's text) and the 'originalSentence' (from the source).
-- Report all instances with a similarityScore >= 90%.
+- You MUST report ALL instances with a similarityScore >= 90%.
 - Respond with a VALID JSON object without any markdown wrappers.
 
 **JSON STRUCTURE:**
@@ -107,22 +107,42 @@ module.exports = async (req, res) => {
             if (!idea) { console.timeEnd("Total Request Time"); return res.status(400).json({ error: 'Missing idea.' }); }
             
             console.time("Parallel API Calls");
-            const conceptualPromise = model_1.generateContent(`${promptForConceptualAnalysis}\n\n[User's Text]:\n${idea}`).then(r => r.response.text());
-            const textualPromise = model_2.generateContent(`${promptForTextualAnalysis}\n\n[User's Text]:\n${idea}`).then(r => r.response.text());
+
+            const runConceptualAnalysis = async () => {
+                console.time("Conceptual Task");
+                const result = await model_1.generateContent(`${promptForConceptualAnalysis}\n\n[User's Text]:\n${idea}`);
+                console.timeEnd("Conceptual Task");
+                return result.response.text();
+            };
+
+            const runTextualAnalysis = async () => {
+                console.time("Textual Task");
+                const result = await model_2.generateContent(`${promptForTextualAnalysis}\n\n[User's Text]:\n${idea}`);
+                console.timeEnd("Textual Task");
+                return result.response.text();
+            };
+
+            const results = await Promise.allSettled([
+                runConceptualAnalysis(),
+                runTextualAnalysis()
+            ]);
             
-            const results = await Promise.allSettled([conceptualPromise, textualPromise]);
             console.timeEnd("Parallel API Calls");
 
-            if (results[0].status === 'rejected' || results[1].status === 'rejected') {
+            const conceptualResult = results[0];
+            const textualResult = results[1];
+
+            if (conceptualResult.status === 'rejected' || textualResult.status === 'rejected') {
+                console.error("Conceptual Task Error:", conceptualResult.reason);
+                console.error("Textual Task Error:", textualResult.reason);
                 throw new Error("AI 분석 작업 중 하나 이상이 실패했습니다.");
             }
             
-            const conceptualJson = safeJsonParse(results[0].value);
-            const textualJson = safeJsonParse(results[1].value);
+            const conceptualJson = safeJsonParse(conceptualResult.value);
+            const textualJson = safeJsonParse(textualResult.value);
 
             if (!conceptualJson || !textualJson) { throw new Error("AI 응답을 JSON으로 변환하는 데 실패했습니다."); }
             
-            // 두 결과를 하나의 최종 JSON 객체로 병합
             finalResultJson = {
                 documentType: conceptualJson.documentType,
                 logicalOriginalityScore: conceptualJson.logicalOriginalityScore,
