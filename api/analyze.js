@@ -10,7 +10,7 @@ const model = genAI.getGenerativeModel({
 });
 
 
-// --- 프롬프트 엔지니어링 ---
+// --- 프롬프트 엔지니어링 (학생용) ---
 
 // [1단계] 학생용: 최초 아이디어 분석 및 질문 생성용 프롬프트
 const promptForStep1 = `
@@ -76,35 +76,8 @@ Be concise and fast.
 }
 `;
 
-// [3단계] 조교/교수용: 리포트 평가 프롬프트 (신규 추가)
-const promptForStep3_TA = `
-You are an expert academic Teaching Assistant (TA). Your goal is to analyze a student's report and provide a draft assessment for the professor.
-Be objective, constructive, and concise. Respond in Korean.
 
-**JSON OUTPUT RULES:**
-- YOU MUST RESPOND WITH A VALID JSON OBJECT.
-- Do not include markdown \`\`\`json or any text outside the JSON structure.
-
-**JSON STRUCTURE:**
-{
-  "summary": "<A concise one-paragraph summary of the report's main argument and conclusion.>",
-  "originalityDraft": "<A one-paragraph preliminary assessment of the report's originality, suitable for a TA's feedback report.>",
-  "keyStrengths": [
-    "<A key strength of the report (e.g., '논리 전개가 명확함')>",
-    "<Another key strength (e.g., '독창적인 데이터 해석 시도')>"
-  ],
-  "areasForImprovement": [
-    "<A key weakness or area for improvement (e.g., '핵심 주장에 대한 근거 부족')>",
-    "<Another area for improvement (e.g., '기존 연구와의 차별성 부각 필요')>"
-  ],
-  "similarPhrases": [
-    "<List any specific sentences or phrases that seem overly common or potentially plagiarized from known sources. If none, return an empty array [].>"
-  ]
-}
-`;
-
-
-// 4. Vercel 서버리스 함수 (핵심 로직)
+// 4. Vercel 서버리스 함수 (학생용 로직)
 module.exports = async (req, res) => {
     // 4.1. POST 메소드만 허용
     if (req.method !== 'POST') {
@@ -112,8 +85,8 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // 4.2. 요청 바디에서 stage 및 관련 데이터 파싱
-        const { stage, idea, originalIdea, answers, reportText } = req.body;
+        // 4.2. 요청 바디에서 학생 데이터 파싱
+        const { stage, idea, originalIdea, answers } = req.body;
 
         let prompt = "";
         let userInput = "";
@@ -131,15 +104,9 @@ module.exports = async (req, res) => {
             prompt = promptForStep2;
             userInput = `[Original Idea]:\n${originalIdea}\n\n[User's Answers]:\n${answers.join('\n')}`;
         
-        } else if (stage === 'assess_report') {
-            // 조교용 3단계: 리포트 평가
-            if (!reportText) return res.status(400).json({ error: 'Missing reportText.' });
-            prompt = promptForStep3_TA;
-            userInput = `Here is the student's report:\n${reportText}`;
-
         } else {
             // 정의되지 않은 stage
-            return res.status(400).json({ error: 'Invalid stage provided.' });
+            return res.status(400).json({ error: 'Invalid stage provided (must be analyze or fuse).' });
         }
         
         // 4.4. AI 모델에 보낼 전체 프롬프트 구성
@@ -151,14 +118,10 @@ module.exports = async (req, res) => {
         let analysisResultText = response.text();
 
         // 4.6. 견고한 JSON 파싱 (Robust JSON Parsing)
-        // AI가 마크다운(```json)을 포함했거나 앞뒤에 불필요한 텍스트를 붙였을 경우 대비
-        
         const jsonMatch = analysisResultText.match(/```json\s*([\s\S]*?)\s*```/);
         if (jsonMatch && jsonMatch[1]) {
-            // 1. 마크다운 블록이 있다면 내부 텍스트만 추출
             analysisResultText = jsonMatch[1];
         } else {
-            // 2. 마크다운이 없다면, 첫 '{'와 마지막 '}'를 기준으로 파싱 시도
             const firstBrace = analysisResultText.indexOf('{');
             const lastBrace = analysisResultText.lastIndexOf('}');
             if (firstBrace !== -1 && lastBrace > firstBrace) {
@@ -175,8 +138,8 @@ module.exports = async (req, res) => {
         } catch (e) {
             // 4.9. JSON 파싱 실패 시 서버 에러 전송
             console.error("JSON Parsing Error:", e.message);
-            console.error("Original AI Response:", analysisResultText); // 실패한 텍스트 로그 기록
-            throw new Error(`AI가 유효하지 않은 JSON 형식으로 응답했습니다. (파싱 실패)`);
+            console.error("Original AI Response:", analysisResultText); 
+            throw new Error(`AI가 유효하지 않은 JSON 형식으로 응답했습니다.`);
         }
 
     } catch (error) {
