@@ -158,7 +158,7 @@ async function callApi(body) {
     spinner.classList.remove('hidden');
     spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 50000); // Timeout set to 50 seconds
+    const timeoutId = setTimeout(() => controller.abort(), 50000); // Timeout increased to 50 seconds
     try {
         const response = await fetch('/api/student', { 
             method: 'POST',
@@ -217,7 +217,7 @@ async function handleFusionRequest() {
 
 // --- Rendering Functions ---
 function renderAnalysisReport(data) {
-    const { documentType, coreSummary, logicFlowchart, logicalOriginalityScore, plagiarismReport } = data;
+    const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport } = data;
     
     document.getElementById('analysis-doc-type').textContent = `(분석 유형: ${documentType})`;
     
@@ -228,6 +228,8 @@ function renderAnalysisReport(data) {
     flowchartContainer.innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
 
     const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport.plagiarismSuspicion);
+    const logicalOriginalityScore = 100 - (structuralComparison ? ((structuralComparison.topicalSimilarity * 0.4) + (structuralComparison.structuralSimilarity * 0.6)) : 0);
+    document.getElementById('originality-reasoning-text').textContent = structuralComparison.originalityReasoning || "분석 코멘트가 없습니다.";
 
     animateGauge('logical-gauge-arc', 'logical-gauge-text', logicalOriginalityScore);
     animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true);
@@ -236,23 +238,15 @@ function renderAnalysisReport(data) {
     reportContainer.innerHTML = '';
     let hasContent = false;
 
-    if (plagiarismReport.structuralPlagiarism && plagiarismReport.structuralPlagiarism.length > 0) {
+    if (structuralComparison && structuralComparison.sourceName) {
         hasContent = true;
-        const structuralSection = document.createElement('div');
-        structuralSection.innerHTML = `<h4>구조적 유사성</h4>`;
-        plagiarismReport.structuralPlagiarism.forEach(item => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'report-item structural';
-            itemDiv.innerHTML = `
-                <p><strong>유사 논리 구조:</strong> ${item.sourceLogic}</p>
-                <p><strong>유사 지점:</strong> ${item.pointOfSimilarity}</p>
-            `;
-            structuralSection.appendChild(itemDiv);
-        });
-        reportContainer.appendChild(structuralSection);
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'report-item structural';
+        itemDiv.innerHTML = `<h4>구조적 유사성</h4><p><strong>유사사례:</strong> ${structuralComparison.sourceName}</p><p><strong>유사 논리 구조:</strong> ${structuralComparison.sourceLogic}</p><p><strong>구조 일치율:</strong> ${structuralComparison.structuralSimilarity}%</p><div class="similarity-bar-container"><div class="similarity-bar" style="width: ${structuralComparison.structuralSimilarity}%;"></div></div>`;
+        reportContainer.appendChild(itemDiv);
     }
 
-    if (plagiarismReport.plagiarismSuspicion && plagiarismReport.plagiarismSuspicion.length > 0) {
+    if (plagiarismReport && plagiarismReport.plagiarismSuspicion && plagiarismReport.plagiarismSuspicion.length > 0) {
         hasContent = true;
         plagiarismReport.plagiarismSuspicion.sort((a, b) => b.similarityScore - a.similarityScore).forEach(item => {
             const itemDiv = document.createElement('div');
@@ -265,6 +259,9 @@ function renderAnalysisReport(data) {
     if (!hasContent) {
         reportContainer.innerHTML = '<p>표절 의심 항목이 발견되지 않았습니다.</p>';
     }
+
+    // Enable the questions button after rendering
+    document.getElementById('btn-show-questions').disabled = false;
 }
 
 function calculateTextPlagiarismScore(plagiarismSuspicion) {
