@@ -14,7 +14,7 @@ const model = genAI.getGenerativeModel({
 });
 
 
-// --- 프롬프트 엔지니어링 (속도 최적화: 실시간 검색 제거) ---
+// --- 프롬프트 엔지니어링 (새로운 분석 구조) ---
 
 // [1단계] 자동 분류 및 통합 분석용 프롬프트
 const promptForStep1 = `
@@ -25,16 +25,22 @@ Provide a single, consolidated report in JSON format, in Korean. Be extremely fa
 **Plagiarism Analysis Rules:**
 1.  **Context is Key:** Differentiate 'plagiarismSuspicion' (no attribution) from 'properCitation' (has quotes/source).
 2.  **Ignore Generic Formats:** Do NOT flag general writing structures as structural plagiarism. Focus on unique logical flows from specific, known concepts or works from your internal knowledge.
-3.  **Use Internal Knowledge:** For structural plagiarism, provide a well-known real-world example (e.g., 'Airbnb', 'Netflix's recommendation algorithm') INSTEAD of searching for a live URL.
+3.  **Use Internal Knowledge:** For structural plagiarism, provide a well-known real-world example INSTEAD of searching for a live URL.
 
 **JSON OUTPUT RULES:**
 - Respond with a VALID JSON object. Do not include markdown \`\`\`json.
+- The 'textPlagiarismScore' should be an estimation based on the findings in 'plagiarismSuspicion'.
 
 **JSON STRUCTURE:**
 {
   "documentType": "<The category you identified: '아이디어/기획안', '논설문/에세이', or '소감문/리뷰'>",
-  "originalityScore": <Number 0-100 for originality>,
-  "overallAssessment": "<One-paragraph assessment based on the identified document type.>",
+  "logicalOriginalityScore": <Number 0-100 for structural/logical originality>,
+  "textPlagiarismScore": <Number 0-100 for textual plagiarism risk. High score = high risk.>,
+  "coreSummary": [
+    "<The 1st key logic step or key sentence of the text.>",
+    "<The 2nd key logic step or key sentence of the text.>",
+    "<The 3rd key logic step or key sentence of the text.>"
+  ],
   "judgmentCriteria": [
     "<Criterion 1 relevant to the doc type>",
     "<Criterion 2 relevant to the doc type>",
