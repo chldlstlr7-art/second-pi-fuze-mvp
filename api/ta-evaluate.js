@@ -9,11 +9,12 @@ const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash", 
 });
 
-// --- 프롬프트 엔지니어링 (평가 전용) ---
+// --- 프롬프트 엔지니어링 (평가+점수 전용) ---
 const promptForEvaluation = `
 You are an expert academic Teaching Assistant (TA).
-Your task is *only* to evaluate the following student report for originality, strengths, and weaknesses.
-Be objective and constructive. Respond in Korean.
+Your task is to evaluate the following student report and provide a quantitative score.
+Base the score on the report's logical flow, argument clarity, completeness, and originality.
+Respond in Korean.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
@@ -21,15 +22,8 @@ Be objective and constructive. Respond in Korean.
 
 **JSON STRUCTURE:**
 {
-  "originalityDraft": "<A one-paragraph preliminary assessment of the report's originality.>",
-  "keyStrengths": [
-    "<A key strength of the report (e.g., '논리 전개가 명확함')>",
-    "<Another key strength>"
-  ],
-  "areasForImprovement": [
-    "<A key weakness or area for improvement (e.g., '핵심 주장에 대한 근거 부족')>",
-    "<Another area for improvement>"
-  ]
+  "overallScore": <Number from 0-100. Base this score on logical flow, clarity, and originality.>,
+  "originalityDraft": "<A *brief* (1-2 sentences) assessment of the report's originality.>"
 }
 `;
 
