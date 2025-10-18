@@ -1,65 +1,90 @@
-// 1. OpenAI 대신 Google Gemini 라이브러리를 가져옵니다.
+// 1. Google Gemini 라이브러리 가져오기
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// 2. Vercel에 저장할 'GEMINI_API_KEY'를 가져옵니다.
+// 2. Vercel에 저장된 'GEMINI_API_KEY' 가져오기
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// 3. PI-Fuze의 시스템 프롬프트 (기존과 동일)
-const systemPrompt = `
-    당신은 서울대학교의 지능형 교육 조교(AI-TA) 'PI-Fuze'입니다.
-    당신의 임무는 학생의 아이디어를 분석하여 단순 표절을 넘어 '논리 구조나 핵심 아이디어의 구조적 복제' 가능성을 진단하고, 창의적 사고를 증진시키는 것입니다.
+// 3. AI 모델 설정 (님이 찾아낸 그 모델!)
+// (주의: systemInstruction은 이 모델에서 지원하지 않을 수 있으니, 프롬프트에 직접 포함합니다.)
+const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash", 
+});
 
-    다음 3단계 프로세스에 따라 응답을 생성해주세요:
+// --- 프롬프트 엔지니어링 ---
 
-    1.  **[1단계: 독창성 진단]**:
-        * 제출된 아이디어의 핵심 '아이디어 원형(Archetype)'을 분석합니다.
-        * 이 아이디어가 학계나 산업계에서 흔히 발견되는 구조(구조적 복제)인지, 독창성이 부족한 원인(예: 관점 협소, 가정 고정)이 무엇인지 진단합니다.
+// [1단계] 최초 아이디어 분석 및 질문 생성용 프롬프트
+const promptForStep1 = `
+당신은 서울대학교의 지능형 교육 조교(AI-TA) 'PI-Fuze'입니다.
+학생의 아이디어를 분석하고, 다음 3가지 항목을 **순서대로** 명확하게 제시해주세요.
 
-    2.  **[2단계: 메타인지적 도발]**:
-        * 진단된 원인을 해결하기 위해, 학생의 사고를 자극하는 '도발적인 질문' 3가지를 생성합니다.
-        * 이 질문은 학생의 고정된 가정을 깨고 문제를 재정의하도록 유도해야 합니다.
+1.  **[표절 위험도 진단]**
+    * 제출된 아이디어의 핵심 개념을 분석하고, 일반적인 아이디어 대비 표절 위험도(구조적 복제 포함)를 '높음', '중간', '낮음'으로 평가하고 그 이유를 1-2줄로 설명합니다.
 
-    3.  **[3단계: 융합 경로 제안]**:
-        * 학생의 초기 아이디어를 발전시킬 수 있는 독창적인 '융합 아이디어 경로' 2가지를 구체적으로 제시합니다.
-        * 전혀 다른 학문 분야와의 융합이나 역설적인 해법을 포함해야 합니다.
+2.  **[구조적 복제의 원인]**
+    * 만약 독창성이 부족하다면, 그 원인을 '관점 협소', '기존 가정 고정' 등 1-2가지 키워드로 지적합니다. (독창적이라면 '매우 독창적인 접근'이라고 칭찬합니다.)
 
-    응답은 명확하게 Markdown 형식을 사용하고, 각 단계를 제목(##)으로 구분해주세요.
+3.  **[창의적 사고 도발 질문 (3가지)]**
+    * 아이디어를 더 깊고 넓게 확장시키기 위한 '창의적 도발 질문' 3가지를 제시합니다.
+    * 이 질문은 학생이 자신의 아이디어에 대해 다른 관점을 갖도록 유도해야 합니다.
+    * 질문 후, "이 질문들에 대해 답변해주시면 다음 단계로 아이디어를 융합시켜 드립니다."라고 마무리 멘트를 추가해주세요.
 `;
 
-// 4. Vercel 서버리스 함수
+// [2단계] 답변을 받아 최종 융합 아이디어 생성용 프롬프트
+const promptForStep2 = `
+당신은 최고의 창의적 융합 전문가입니다.
+학생의 [최초 아이디어]와 그 아이디어를 발전시키기 위한 [학생의 답변]을 받았습니다.
+
+당신의 임무는 이 두 가지 정보를 **적극적으로 융합**하여, 매우 구체적이고, 독창적이며, 실행 가능한 **'최종 융합 아이디어'** 1가지를 제안하는 것입니다.
+
+* 학생의 답변을 반드시 반영하여 아이디어를 발전시켜야 합니다.
+* "다음은 융합 아이디어 제안입니다."라는 제목으로 시작해주세요.
+* 아이디어 이름, 핵심 타겟, 주요 기능, 그리고 왜 이것이 독창적인지에 대해 구체적으로 설명해주세요.
+`;
+
+
+// 4. Vercel 서버리스 함수 (핵심 로직)
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 
     try {
-        const { idea } = req.body;
-        if (!idea) {
-            return res.status(400).json({ error: '아이디어를 입력해주세요.' });
+        // 프론트엔드에서 보낸 JSON 본문 파싱
+        const { idea, originalIdea, answers } = req.body;
+
+        let fullPrompt = "";
+        
+        // [1단계 요청] 최초 아이디어가 들어온 경우
+        if (idea) {
+            fullPrompt = `${promptForStep1}\n\n[학생의 최초 아이디어]:\n${idea}`;
+        } 
+        // [2단계 요청] 최초 아이디어와 답변이 함께 들어온 경우
+        else if (originalIdea && answers) {
+            fullPrompt = `${promptForStep2}\n\n[최초 아이디어]:\n${originalIdea}\n\n[학생의 답변]:\n${answers}`;
+        } 
+        // 잘못된 요청
+        else {
+            return res.status(400).json({ error: '잘못된 요청입니다. \'idea\' 또는 \'originalIdea\'와 \'answers\'가 필요합니다.' });
         }
 
-        // 5. Gemini 모델을 설정합니다. (시스템 프롬프트 포함)
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash", // 강력한 최신 모델
-            systemInstruction: systemPrompt,
-        });
-
-        // 6. 채팅 세션을 시작하고 사용자 아이디어를 보냅니다.
-        const chat = model.startChat();
-        const result = await chat.sendMessage(idea); // 'idea'가 사용자 프롬프트
+        // AI 모델 호출
+        const result = await model.generateContent(fullPrompt);
         const response = await result.response;
         const analysisResult = response.text();
 
-        // 7. 결과를 프론트엔드로 전송합니다.
+        // 결과를 프론트엔드로 전송
         res.status(200).json({ analysis: analysisResult });
 
     } catch (error) {
         console.error('AI 분석 중 오류:', error);
-        // Gemini에서 할당량 초과 시 '429' 오류를 다르게 보낼 수 있습니다.
-        if (error.message && error.message.includes('429')) {
-            res.status(429).json({ error: 'Gemini 무료 할당량을 초과했습니다. 잠시 후 시도해주세요.' });
-        } else {
-            res.status(500).json({ error: 'AI 모델을 호출하는 데 실패했습니다.' });
+        let errorMessage = 'AI 모델을 호출하는 데 실패했습니다.';
+        if (error.message && error.message.includes('404')) {
+            errorMessage = '모델을 찾을 수 없습니다. (404)';
+        } else if (error.message && error.message.includes('429')) {
+            errorMessage = '무료 할당량을 초과했습니다. (429)';
+        } else if (error.message) {
+            errorMessage = error.message;
         }
+        res.status(500).json({ error: errorMessage });
     }
 };
