@@ -12,10 +12,11 @@ const model = genAI.getGenerativeModel({
 
 // --- 프롬프트 엔지니어링 (속도 최적화) ---
 
-// [1단계] 최초 아이디어 분석 및 질문 생성용 프롬프트 (간결화 버전)
+// [1단계] 최초 아이디어 분석 및 질문 생성용 프롬프트 (유사성 분석 추가)
 const promptForStep1 = `
 Analyze the user's idea. Provide a balanced report in JSON format.
 Find a real-world parallel and highlight similarities and differences.
+**NEW TASK:** Also, conduct a 'text similarity check'. Find key phrases or sentences in the user's idea that are overly similar to common knowledge or existing products. This is to warn the user about potential lack of novelty or textual overlap.
 Be concise, in korean.
 
 **JSON OUTPUT RULES:**
@@ -36,6 +37,12 @@ Be concise, in korean.
     "existingExampleDesc": "<One-sentence description of the existing service.>",
     "pointsOfSimilarity": "<Explain structural similarities with the existing service.>",
     "pointsOfDifference": "<Explain creative differences and unique points of the user's idea.>"
+  },
+  "similarityReport": {
+     "highlySimilarPhrases": [
+       "<Analyze the user's idea text and list key phrases or sentences that are highly similar to well-known concepts or existing materials. If none, return an empty array [].>"
+     ],
+     "reportSummary": "<A brief one-sentence summary about the textual similarity. (e.g., '일부 핵심 용어가 기존 솔루션과 겹치지만, 전반적인 구조는 독창적입니다.' or '제시된 아이디어의 핵심 문구가 [유사사례]와 매우 흡사하여 주의가 필요합니다.')>"
   },
   "questions": [
     "<A question challenging the user's core assumptions.>",
@@ -98,9 +105,17 @@ module.exports = async (req, res) => {
         let analysisResultText = response.text();
 
         // --- Robust JSON Parsing ---
+        // 프롬프트에서 JSON 마크다운을 쓰지 말라고 했지만, 만약을 대비한 방어 코드
         const jsonMatch = analysisResultText.match(/```json\s*([\s\S]*?)\s*```/);
         if (jsonMatch && jsonMatch[1]) {
             analysisResultText = jsonMatch[1];
+        }
+
+        // AI 응답이 JSON 형식이 아닐 수 있는 문제를 방지하기 위해 텍스트 시작/끝의 중괄호를 기준으로 파싱 시도
+        const firstBrace = analysisResultText.indexOf('{');
+        const lastBrace = analysisResultText.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+             analysisResultText = analysisResultText.substring(firstBrace, lastBrace + 1);
         }
 
         try {
@@ -121,4 +136,3 @@ module.exports = async (req, res) => {
         res.status(500).json({ error: errorMessage });
     }
 };
-
