@@ -83,74 +83,38 @@
         
         .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 20px; }
         .gauge-container { text-align: center; }
-
-        /* --- NEW CSS Semi-Circle Chart Styles --- */
-        .semi-circle-chart {
-            width: 200px;
-            height: 100px; /* Only the top half is visible */
+        
+        /* --- START: NEW DONUT CHART STYLES --- */
+        .donut-chart-container {
+            width: 150px; 
+            height: 150px; 
+            margin: 10px auto; /* 상단 h3와 간격 추가 */
             position: relative;
-            margin: 20px auto 0;
-            overflow: hidden; /* Hide the bottom half of the circle */
         }
-        .semi-circle-chart::before {
-            /* Background track (Gray part) */
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            border: 15px solid var(--border-color);
-            border-bottom-color: transparent; /* Makes it a semi-circle track */
-            border-left-color: transparent;
-            box-sizing: border-box;
-            transform: rotate(-135deg); /* Start from the left bottom */
+        .donut-chart-container svg {
+            transform: rotate(-90deg); /* 원이 위에서부터 시작하도록 회전 */
         }
-        .progress-arc {
-            /* Masking container for the colored arc */
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            box-sizing: border-box;
-            overflow: hidden;
+        .donut-bg {
+            stroke: var(--border-color); /* 차트 배경색 */
+            stroke-width: 15;
+            fill: none;
         }
-        .progress-circle {
-            /* Actual progress arc (fills up) */
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            border: 15px solid transparent;
-            border-top: 15px solid var(--secondary-color);
-            border-right: 15px solid var(--secondary-color);
-            box-sizing: border-box;
-            /* Initial state for 0% is 45deg rotation. The progress is a rotation from 45deg to 225deg (180 degrees total) */
-            transform: rotate(45deg); 
-            transition: transform 1s ease-in-out; /* Smooth fill animation */
-
-            /* Optional: Gradient Fill for the progress */
-            border-image: linear-gradient(to right, var(--primary-color), var(--secondary-color)) 1;
-            border-image-slice: 1;
-            border-style: solid;
-            border-width: 15px;
-            /* To use border-image on the arc, we need to hide the transparent border colors and make the background solid. This is complex for a simple semi-circle, so we'll stick to a solid color and use the JS to simulate the gradient via CSS variable change if needed. For simplicity, keeping it solid green/blue for now. */
+        .donut-fg {
+            stroke: url(#gaugeGradient); /* 그라데이션 적용 */
+            stroke-width: 15;
+            fill: none;
+            stroke-linecap: round; /* 선 끝을 둥글게 */
+            transition: stroke-dashoffset 1.2s ease-in-out; /* 부드러운 애니메이션 */
         }
-        .progress-text {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 2.2em;
-            font-weight: 800;
-            color: var(--primary-color);
+        .donut-text {
+            font-size: 28px;
+            font-weight: bold;
+            fill: var(--text-dark);
+            transform: rotate(90deg); /* SVG 전체 회전에 맞춰 텍스트만 바로 세움 */
+            transform-origin: 50% 50%;
+            text-anchor: middle;
         }
-        /* --- END NEW CSS Styles --- */
+        /* --- END: NEW DONUT CHART STYLES --- */
 
         .comparison-card { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
         .comparison-card h4 { margin-top: 0; color: var(--primary-color); font-size: 1.2em;}
@@ -221,11 +185,21 @@
             <div class="analysis-grid">
                 <div class="gauge-container">
                     <h3>구조적 독창성</h3>
-                    <div class="semi-circle-chart">
-                        <div class="progress-arc">
-                            <div class="progress-circle" id="gauge-arc-css"></div>
-                        </div>
-                        <div class="progress-text" id="gauge-text-css">0%</div>
+                    
+                    <div class="donut-chart-container">
+                        <svg width="150" height="150" viewBox="0 0 120 120">
+                            <defs>
+                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#D0021B"/>
+                                    <stop offset="50%" stop-color="#F8E71C"/>
+                                    <stop offset="100%" stop-color="#50E3C2"/>
+                                </linearGradient>
+                            </defs>
+                            <circle class="donut-bg" cx="60" cy="60" r="50"></circle>
+                            <circle class="donut-fg" id="donut-fg-circle" cx="60" cy="60" r="50"
+                                    stroke-dasharray="314.159" stroke-dashoffset="314.159"></circle>
+                            <text class="donut-text" id="donut-text-label" x="60" y="60" dy="0.3em">0%</text>
+                        </svg>
                     </div>
                     </div>
                 <div class="criteria-container">
@@ -329,11 +303,6 @@ const btnFeedbackYes = document.getElementById('btn-feedback-yes');
 const btnFeedbackNo = document.getElementById('btn-feedback-no');
 const feedbackMessage = document.getElementById('feedback-message');
 
-// --- NEW GAUGE DOM ELEMENTS ---
-const cssGaugeArc = document.getElementById('gauge-arc-css');
-const cssGaugeText = document.getElementById('gauge-text-css');
-
-
 // --- Event Listeners ---
 btnStartAnalysis.addEventListener('click', handleAnalysisRequest);
 btnShowQuestions.addEventListener('click', () => revealStage('questions'));
@@ -378,53 +347,38 @@ function finalizeStage(stageName) {
 }
 
 
-// --- API Call Logic (MOCK) ---
-// 실제 환경에서는 이 부분을 서버 API 호출로 대체해야 합니다.
+// --- API Call Logic ---
 async function callApi(body) {
     spinner.classList.remove('hidden');
     spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
-    // MOCK API CALL - Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
 
-    spinner.classList.add('hidden');
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
 
-    if (body.stage === 'analyze') {
-        // MOCK Analysis Data - Use a random score for demonstration
-        const mockScore = Math.floor(Math.random() * 50) + 50; // Score between 50 and 99
-        return {
-            originalityScore: mockScore, 
-            overallAssessment: "아이디어는 기존 기술의 장점을 활용하면서도 독자적인 '상호작용성'을 강조하여 높은 구조적 독창성을 보입니다. 특히 사용자 경험 중심의 접근이 긍정적이나, 유사 사례의 핵심 기능과의 차별화 포인트를 명확히 할 필요가 있습니다.",
-            judgmentCriteria: [
-                "기존 기술의 조합 방식",
-                "핵심 가치의 새로운 정의",
-                "시장 내 포지셔닝의 독특성",
-                "사용자 상호작용의 혁신성"
-            ],
-            comparisonAnalysis: {
-                existingExampleName: "AI 기반 스마트 러닝 플랫폼 'EduSpark'",
-                existingExampleDesc: "EduSpark는 개인화된 퀴즈와 진도 관리에 중점을 둔 AI 교육 솔루션으로, 정적인 콘텐츠 제공 방식을 탈피했습니다.",
-                pointsOfSimilarity: "두 아이디어 모두 AI를 활용한 학습 최적화 및 개인화된 경험 제공을 목표로 합니다. 특히 데이터 기반의 피드백 루프 구조가 유사하여, 초기 시장 진입 시 유사 서비스로 인식될 위험이 있습니다.",
-                pointsOfDifference: "본 아이디어는 '양방향 인터랙션'과 '창의적 도발 질문'을 통한 비판적 사고 유도에 집중하여 단순 지식 습득을 넘어선 창의력 향상을 목표로 합니다. 이는 유사 사례에선 찾아볼 수 없는 명확한 차별점입니다."
-            },
-            questions: [
-                "당신의 아이디어가 '사용자의 비판적 사고'를 어떻게 정량적으로 측정하고 개선할 수 있나요?",
-                "유사 사례가 제공하는 '콘텐츠 자체의 질'을 능가하기 위해 어떤 추가적인 자원이나 전략이 필요합니까?",
-                "만약 이 아이디어를 '교육' 분야가 아닌 '경영 전략 수립'에 적용한다면, 핵심 기능은 어떻게 변해야 할까요?"
-            ]
-        };
-    } else if (body.stage === 'fuse') {
-        // MOCK FUSION RESULT
-        return {
-            fusionTitle: "PI-Fuze: 비판적 전략 수립 엔진",
-            fusionSummary: "사용자의 독창적인 아이디어와 AI의 '창의적 도발 질문' 답변을 융합하여, 경영 환경의 불확실성을 타개하는 독창적인 비즈니스 전략을 자동으로 도출하고 평가하는 AI 엔진입니다.",
-            connection: "교육 분야의 '비판적 사고 유도 메커니즘'을 경영 전략 도출 과정에 접목하여, 기존의 정형화된 SWOT 분석을 뛰어넘는 비선형적이고 혁신적인 전략을 구축하는 것이 핵심 연결고리입니다.",
-            keyFeatures: [
-                "**전략적 사고 도발:** 기존 아이디어의 허점을 지적하는 300가지 이상의 AI 기반 도전 질문 라이브러리.",
-                "**비선형적 연결:** 답변 간의 숨겨진 상관관계를 찾아내어 새로운 가설을 자동으로 생성.",
-                "**시뮬레이션 기반 검증:** 도출된 전략을 가상 시장 환경에서 실시간으로 시뮬레이션하고 독창성 점수 재평가."
-            ]
-        };
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({ error: "An unknown server error occurred." }));
+            throw new Error(errData.error || `서버 오류: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        if (error.name === 'AbortError') {
+             alert('오류: AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요. (Timeout)');
+        } else {
+             alert(`오류가 발생했습니다: ${error.message}`);
+        }
+        location.reload();
+    } finally {
+        spinner.classList.add('hidden');
     }
 }
 
@@ -436,12 +390,7 @@ async function handleAnalysisRequest() {
         return;
     }
     finalizeStage('input');
-    // 실제 API 호출 시 주석 해제 및 API 엔드포인트에 맞게 수정
-    // const data = await callApi({ stage: 'analyze', idea: originalIdea });
-    
-    // MOCK 데이터 사용 (실제 API가 없으므로)
-    const data = await callApi({ stage: 'analyze', idea: originalIdea }); 
-
+    const data = await callApi({ stage: 'analyze', idea: originalIdea });
     if (data) {
         renderAnalysisReport(data);
         renderQuestionInputs(data.questions);
@@ -449,27 +398,28 @@ async function handleAnalysisRequest() {
     }
 }
 
+// --- START: MODIFIED renderAnalysisReport Function ---
 function renderAnalysisReport(data) {
     const { originalityScore, overallAssessment, judgmentCriteria, comparisonAnalysis } = data;
     
-    // Render CSS Gauge
-    const score = originalityScore;
-    // 0% (45deg) to 100% (225deg) = 180 degrees range
-    const rotation = 45 + (score / 100) * 180; 
-    
-    // 0도에서 시작하여 목표 각도까지 부드럽게 회전
-    // Note: 초기값은 CSS에 45deg로 설정되어 있으므로, 45deg는 0%를 나타냅니다.
-    // transform: rotate(45deg)가 0%
-    // transform: rotate(225deg)가 100%
-    if (cssGaugeArc && cssGaugeText) {
-        cssGaugeArc.style.transform = `rotate(${rotation}deg)`;
-        cssGaugeText.textContent = `${score}%`;
-    }
+    // --- Render Donut Chart ---
+    const donutFg = document.getElementById('donut-fg-circle');
+    const donutText = document.getElementById('donut-text-label');
+    const circumference = 2 * Math.PI * 50; // 314.159...
+    const offset = circumference - (originalityScore / 100) * circumference;
 
-    // Render Texts
+    // SVG 원의 둘레(circumference)를 stroke-dasharray에 설정
+    donutFg.style.strokeDasharray = circumference;
+    // 점수(%)만큼 offset을 설정하여 차트가 차오르게 함
+    donutFg.style.strokeDashoffset = offset;
+    
+    // 숫자 카운트업 애니메이션 (아래 animateValue 함수 참조)
+    animateValue(donutText, 0, originalityScore, 1200); // 1.2초 동안
+
+    // --- Render Texts ---
     document.getElementById('overall-assessment').textContent = overallAssessment;
     
-    // Render Criteria
+    // --- Render Criteria ---
     const criteriaList = document.getElementById('criteria-list');
     criteriaList.innerHTML = '';
     judgmentCriteria.forEach(item => {
@@ -478,12 +428,13 @@ function renderAnalysisReport(data) {
         criteriaList.appendChild(li);
     });
 
-    // Render Comparison
+    // --- Render Comparison ---
     document.getElementById('comparison-name').textContent = comparisonAnalysis.existingExampleName;
     document.getElementById('comparison-desc').textContent = comparisonAnalysis.existingExampleDesc;
     document.getElementById('points-similarity').textContent = comparisonAnalysis.pointsOfSimilarity;
     document.getElementById('points-difference').textContent = comparisonAnalysis.pointsOfDifference;
 }
+// --- END: MODIFIED renderAnalysisReport Function ---
 
 
 // --- Step 2: Questions ---
@@ -508,13 +459,7 @@ async function handleFusionRequest() {
     }
     finalizeStage('analysis');
     finalizeStage('questions');
-    
-    // 실제 API 호출 시 주석 해제 및 API 엔드포인트에 맞게 수정
-    // const data = await callApi({ stage: 'fuse', originalIdea: originalIdea, answers: userAnswers });
-    
-    // MOCK 데이터 사용 (실제 API가 없으므로)
-    const data = await callApi({ stage: 'fuse', originalIdea: originalIdea, answers: userAnswers }); 
-
+    const data = await callApi({ stage: 'fuse', originalIdea: originalIdea, answers: userAnswers });
     if (data) {
         renderFusionReport(data);
         revealStage('fusion');
@@ -540,6 +485,30 @@ function renderFusionReport(data) {
 }
 
 // --- Utility Functions ---
+
+// --- START: NEW UTILITY FUNCTION for Text Count-Up ---
+/**
+ * 숫자 카운트업 애니메이션
+ * @param {HTMLElement} obj - 텍스트를 표시할 DOM 요소
+ * @param {number} start - 시작 숫자
+ * @param {number} end - 종료 숫자
+ * @param {number} duration - 애니메이션 시간 (ms)
+ */
+function animateValue(obj, start, end, duration) {
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const currentValue = Math.floor(progress * (end - start) + start);
+        obj.textContent = currentValue + "%"; // SVG <text> 요소에는 textContent 사용
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        }
+    };
+    window.requestAnimationFrame(step);
+}
+// --- END: NEW UTILITY FUNCTION ---
+
 function handleCopyResult() {
     navigator.clipboard.writeText(fusionResultForCopy).then(() => {
         const originalText = btnCopyResult.textContent;
