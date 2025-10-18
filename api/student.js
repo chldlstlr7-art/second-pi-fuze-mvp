@@ -25,11 +25,11 @@ const model_2 = genAI_2.getGenerativeModel({ model: "gemini-2.5-flash" });
 const promptForConceptualAnalysis = `
 You are an expert AI consultant. Your task is to perform a conceptual and structural analysis of the user's text.
 First, classify the text into 'idea', 'essay', or 'reflection'.
-Then, provide a detailed analysis. Be extremely fast and concise. Output JSON in Korean.
+Then, provide a detailed analysis including raw scores for calculating originality. Be extremely fast and concise. Output JSON in Korean.
 
 **Structural Plagiarism Rule (Crucial):**
 - Do NOT flag generic writing formats (e.g., 'compare/contrast essay').
-- You should only report structural plagiarism if the SUBSTANTIVE LOGICAL FLOW (e.g., argument-evidence-conclusion) within the SAME OR A VERY SIMILAR TOPIC is nearly identical to a specific source.
+- Only report structural plagiarism if the SUBSTANTIVE LOGICAL FLOW within the SAME OR A VERY SIMILAR TOPIC is nearly identical to a specific source.
 
 **JSON OUTPUT RULES:**
 - Respond with a VALID JSON object without any markdown wrappers.
@@ -37,11 +37,16 @@ Then, provide a detailed analysis. Be extremely fast and concise. Output JSON in
 **JSON STRUCTURE:**
 {
   "documentType": "<'아이디어/기획안', '논설문/에세이', or '소감문/리뷰'>",
-  "logicalOriginalityScore": <Number 0-100 for structural originality>,
   "coreSummary": ["<1st key logic/sentence>", "<2nd key>", "<3rd key>"],
+  "logicFlowchart": "<A -> B -> C>",
   "judgmentCriteria": ["<Criterion 1>", "<Criterion 2>", "<Criterion 3>"],
-  "structuralPlagiarism": [{ "sourceLogic": "<...>", "pointOfSimilarity": "<...>", "similarityLevel": "<...>", "sourceLink": "" }],
-  "questions": ["<...>", "<...>", "<...>"]
+  "structuralComparison": {
+    "sourceName": "<Name of the similar real-world example>",
+    "sourceLogic": "<Briefly describe the logic of the example>",
+    "topicalSimilarity": <Number 0-100 for topic similarity>,
+    "structuralSimilarity": <Number 0-100 for structural similarity>,
+    "originalityReasoning": "<Explain the reasoning for the scores, referencing the flowchart and comparison.>"
+  }
 }
 `;
 
@@ -49,21 +54,26 @@ Then, provide a detailed analysis. Be extremely fast and concise. Output JSON in
 const promptForTextualAnalysis = `
 You are a plagiarism detection specialist. Your ONLY task is to analyze the user's text for direct textual similarities from your internal knowledge.
 Be extremely fast and concise. Output JSON in Korean.
-
-**Rules:**
-- ONLY find sentences that appear to be copied without attribution ('plagiarismSuspicion').
-- For each suspicion, you MUST include both the 'userSentence' (from the user's text) and the 'originalSentence' (from the source).
-- You MUST report ALL instances with a similarityScore >= 90%.
-- Respond with a VALID JSON object without any markdown wrappers.
-
+**Rules:** You MUST report ALL instances with a similarityScore >= 90%, including both 'userSentence' and 'originalSentence'. Respond with a VALID JSON object without markdown wrappers.
 **JSON STRUCTURE:**
 {
-  "textPlagiarismScore": <Number 0-100 for textual plagiarism risk>,
   "plagiarismSuspicion": [{ "userSentence": "<The exact sentence from user's text>", "originalSentence": "<The original sentence from the source>", "source": "<Estimated original source>", "similarityScore": <Number> }]
 }
 `;
 
-// [작업 3] 최종 융합 아이디어 생성용 프롬프트
+// [작업 3] 질문 생성 전용 프롬프트
+const promptForQuestions = `
+Based on the user's text, generate three insightful and probing questions to help them think more deeply and creatively.
+The questions should be relevant to the text's content. Provide the questions in a JSON format, in Korean. Be extremely fast.
+**JSON OUTPUT RULES:** Respond with a VALID JSON object without markdown.
+**JSON STRUCTURE:**
+{
+  "questions": ["<Question 1>", "<Question 2>", "<Question 3>"]
+}
+`;
+
+
+// [작업 4] 최종 융합 아이디어 생성용 프롬프트
 const promptForStep2 = `
 You are a creative strategist. Synthesize the [Original Idea] and [User's Answers] into a 'Fused Idea'.
 Provide a concise analysis and concrete, actionable edit suggestions. Output JSON in Korean.
@@ -107,55 +117,31 @@ module.exports = async (req, res) => {
             if (!idea) { console.timeEnd("Total Request Time"); return res.status(400).json({ error: 'Missing idea.' }); }
             
             console.time("Parallel API Calls");
-
-            const runConceptualAnalysis = async () => {
-                console.time("Conceptual Task");
-                const result = await model_1.generateContent(`${promptForConceptualAnalysis}\n\n[User's Text]:\n${idea}`);
-                console.timeEnd("Conceptual Task");
-                return result.response.text();
-            };
-
-            const runTextualAnalysis = async () => {
-                console.time("Textual Task");
-                const result = await model_2.generateContent(`${promptForTextualAnalysis}\n\n[User's Text]:\n${idea}`);
-                console.timeEnd("Textual Task");
-                return result.response.text();
-            };
-
-            const results = await Promise.allSettled([
-                runConceptualAnalysis(),
-                runTextualAnalysis()
-            ]);
+            const conceptualPromise = model_1.generateContent(`${promptForConceptualAnalysis}\n\n[User's Text]:\n${idea}`).then(r => r.response.text());
+            const textualPromise = model_2.generateContent(`${promptForTextualAnalysis}\n\n[User's Text]:\n${idea}`).then(r => r.response.text());
             
+            const results = await Promise.allSettled([conceptualPromise, textualPromise]);
             console.timeEnd("Parallel API Calls");
 
-            const conceptualResult = results[0];
-            const textualResult = results[1];
-
-            if (conceptualResult.status === 'rejected' || textualResult.status === 'rejected') {
-                console.error("Conceptual Task Error:", conceptualResult.reason);
-                console.error("Textual Task Error:", textualResult.reason);
+            if (results[0].status === 'rejected' || results[1].status === 'rejected') {
                 throw new Error("AI 분석 작업 중 하나 이상이 실패했습니다.");
             }
             
-            const conceptualJson = safeJsonParse(conceptualResult.value);
-            const textualJson = safeJsonParse(textualResult.value);
+            const conceptualJson = safeJsonParse(results[0].value);
+            const textualJson = safeJsonParse(results[1].value);
 
             if (!conceptualJson || !textualJson) { throw new Error("AI 응답을 JSON으로 변환하는 데 실패했습니다."); }
             
-            finalResultJson = {
-                documentType: conceptualJson.documentType,
-                logicalOriginalityScore: conceptualJson.logicalOriginalityScore,
-                coreSummary: conceptualJson.coreSummary,
-                judgmentCriteria: conceptualJson.judgmentCriteria,
-                questions: conceptualJson.questions,
-                textPlagiarismScore: textualJson.textPlagiarismScore,
-                plagiarismReport: {
-                    plagiarismSuspicion: textualJson.plagiarismSuspicion || [],
-                    structuralPlagiarism: conceptualJson.structuralPlagiarism || [],
-                }
-            };
+            finalResultJson = { ...conceptualJson, ...textualJson };
             
+        } else if (stage === 'generate_questions') {
+             if (!idea) { console.timeEnd("Total Request Time"); return res.status(400).json({ error: 'Missing idea.' }); }
+            
+            console.time("API Call: Questions");
+            const result = await model_1.generateContent(`${promptForQuestions}\n\n[User's Text]:\n${idea}`);
+            finalResultJson = safeJsonParse(result.response.text());
+            console.timeEnd("API Call: Questions");
+
         } else if (stage === 'fuse') {
             if (!originalIdea || !answers) { console.timeEnd("Total Request Time"); return res.status(400).json({ error: 'Missing originalIdea or answers.' }); }
             
