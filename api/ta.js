@@ -12,10 +12,11 @@ const model = genAI.getGenerativeModel({
 
 // --- 프롬프트 엔지니어링 (조교/교수용) ---
 
-// [3단계] 조교/교수용: 리포트 평가 프롬프트
+// [3단계] 조교/교수용: 리포트 평가 프롬프트 (유사성 분석 강화)
 const promptForStep3_TA = `
 You are an expert academic Teaching Assistant (TA). Your goal is to analyze a student's report and provide a draft assessment for the professor.
 Be objective, constructive, and concise. Respond in Korean.
+For the 'similarPhrases' section, you MUST provide detailed analysis for each found phrase.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
@@ -34,7 +35,11 @@ Be objective, constructive, and concise. Respond in Korean.
     "<Another area for improvement (e.g., '기존 연구와의 차별성 부각 필요')>"
   ],
   "similarPhrases": [
-    "<List any specific sentences or phrases that seem overly common or potentially plagiarized from known sources. If none, return an empty array [].>"
+    {
+      "phrase": "<The specific suspicious phrase from the student's report.>",
+      "likelySource": "<The common source this phrase likely originates from (e.g., '위키피디아 [토픽] 항목', '일반적인 교과서 정의', '특정 유명 논문의 핵심 문구').>",
+      "similarityType": "<Explain *how* it's similar (e.g., '표준적인 정의로, 출처 표기 없이 그대로 인용됨', '소스의 핵심 주장을 거의 그대로 재구성함', '일반 상식이지만, 문장 구조가 특정 자료와 매우 흡사함').>"
+    }
   ]
 }
 `;
