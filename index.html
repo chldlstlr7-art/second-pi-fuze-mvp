@@ -84,7 +84,7 @@
         .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 20px; }
         .gauge-container { text-align: center; }
         
-        /* --- START: NEW SEMI-CIRCLE CHART STYLES --- */
+        /* --- START: SEMI-CIRCLE CHART STYLES --- */
         .gauge-svg-container {
             width: 200px; /* SVG 너비와 일치 */
             height: 120px; /* SVG 높이와 일치 */
@@ -103,7 +103,7 @@
             fill: var(--text-dark);
             text-anchor: middle;
         }
-        /* --- END: NEW SEMI-CIRCLE CHART STYLES --- */
+        /* --- END: SEMI-CIRCLE CHART STYLES --- */
 
         .comparison-card { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
         .comparison-card h4 { margin-top: 0; color: var(--primary-color); font-size: 1.2em;}
@@ -114,6 +114,19 @@
         .comparison-point h4 { display: flex; align-items: center; gap: 10px; margin-top: 0; font-size: 1.1em; }
         .comparison-point.similar h4 { color: #D97706; }
         .comparison-point.different h4 { color: #059669; }
+
+        /* --- START: NEW SIMILARITY REPORT STYLES --- */
+        #similar-phrases-list {
+             padding-left: 20px; 
+             margin-top: 10px; 
+             margin-bottom: 0;
+             list-style-type: '⚠️ '; /* 경고 이모지 */
+        }
+        #similar-phrases-list li {
+            padding-left: 8px; /* 이모지와 텍스트 간격 */
+        }
+        /* --- END: NEW SIMILARITY REPORT STYLES --- */
+
 
         .nav-button-container { text-align: center; margin-top: 20px; }
         #btn-show-questions { width: auto; padding: 12px 30px; display: inline-block; background: var(--secondary-color) }
@@ -162,7 +175,7 @@
             <textarea id="idea-input" placeholder="여기에 아이디어를 입력하세요..."></textarea>
             <button id="btn-start-analysis">분석 시작</button>
         </div>
-
+        
         <div id="stage-analysis" class="card hidden">
             <h2>1. 독창성 진단 리포트</h2>
             
@@ -184,19 +197,16 @@
                                     <stop offset="100%" stop-color="#50E3C2"/>
                                 </linearGradient>
                             </defs>
-                            
                             <path id="semi-circle-bg"
                                   d="M 20 100 A 80 80 0 0 1 180 100" 
                                   stroke-width="20" stroke="var(--border-color)" fill="none" stroke-linecap="round" />
-                                  
                             <path id="semi-circle-fg"
                                   d="M 20 100 A 80 80 0 0 1 180 100"
                                   stroke-width="20" stroke="url(#gaugeGradient)" fill="none" stroke-linecap="round" />
-                                  
                             <text id="gauge-text" x="100" y="95" text-anchor="middle">0%</text>
                         </svg>
                     </div>
-                    </div>
+                </div>
                 <div class="criteria-container">
                     <h3>판단 기준</h3>
                     <ul id="criteria-list" class="criteria-list"></ul>
@@ -224,7 +234,24 @@
                     <p id="points-difference"></p>
                 </div>
             </div>
-            
+
+            <div class="analysis-section hidden" id="similarity-report-section" style="margin-top: 30px;">
+                <h3 style="border: none; margin-bottom: 15px;">텍스트 유사성 리포트 (주의)</h3>
+                <div class="comparison-point similar"> 
+                    <h4 style="color: #D97706; display: flex; align-items: center; gap: 10px;">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>
+                        종합 요약
+                    </h4>
+                    <p id="similarity-summary" style="margin-top: 5px;"></p>
+                    
+                    <h4 style="color: #D97706; margin-top: 20px; display: flex; align-items: center; gap: 10px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+                        유사 의심 문구
+                    </h4>
+                    <ul id="similar-phrases-list">
+                        </ul>
+                </div>
+            </div>
             <div class="nav-button-container">
                 <button id="btn-show-questions">질문에 답변하기</button>
             </div>
@@ -325,7 +352,6 @@ function revealStage(stageName) {
     if (stageElement) {
         stageElement.classList.remove('hidden');
         stageElement.classList.add('fade-in');
-        // Scroll to the new stage
         stageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     updateProgressBar(stageName);
@@ -335,7 +361,6 @@ function finalizeStage(stageName) {
     const stageElement = stages[stageName];
     if (stageElement) {
         stageElement.classList.add('finalized');
-        // Disable all buttons and textareas within this stage
         const interactiveElements = stageElement.querySelectorAll('button, textarea');
         interactiveElements.forEach(el => el.disabled = true);
     }
@@ -351,7 +376,8 @@ async function callApi(body) {
     const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
 
     try {
-        const response = await fetch('/api/analyze', {
+        // 백엔드 코드가 Vercel의 /api/ 폴더에 배포되었다고 가정
+        const response = await fetch('/api/analyze', { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
@@ -395,25 +421,16 @@ async function handleAnalysisRequest() {
 
 // --- START: MODIFIED renderAnalysisReport Function ---
 function renderAnalysisReport(data) {
-    const { originalityScore, overallAssessment, judgmentCriteria, comparisonAnalysis } = data;
+    const { originalityScore, overallAssessment, judgmentCriteria, comparisonAnalysis, similarityReport } = data;
     
     // --- Render Semi-Circle Chart ---
     const semiCircleFg = document.getElementById('semi-circle-fg');
     const gaugeText = document.getElementById('gauge-text');
-    
     const radius = 80;
-    const circumference = Math.PI * radius; // 반원의 둘레 (π * r)
-    // 251.33 (CSS에 설정된 값)
-    
-    // 점수(%)에 해당하는 offset 계산
-    // (1 - 0.75) * 251.33 = 0.25 * 251.33 = 62.83
+    const circumference = Math.PI * radius; // 251.33
     const offset = circumference - (originalityScore / 100) * circumference;
-
-    // CSS transition이 이 변경을 애니메이션으로 처리
     semiCircleFg.style.strokeDashoffset = offset;
-    
-    // 숫자 카운트업 애니메이션 (아래 animateValue 함수 참조)
-    animateValue(gaugeText, 0, originalityScore, 1200); // 1.2초 동안
+    animateValue(gaugeText, 0, originalityScore, 1200);
 
     // --- Render Texts ---
     document.getElementById('overall-assessment').textContent = overallAssessment;
@@ -432,6 +449,30 @@ function renderAnalysisReport(data) {
     document.getElementById('comparison-desc').textContent = comparisonAnalysis.existingExampleDesc;
     document.getElementById('points-similarity').textContent = comparisonAnalysis.pointsOfSimilarity;
     document.getElementById('points-difference').textContent = comparisonAnalysis.pointsOfDifference;
+
+    // --- START: NEW: Render Similarity Report ---
+    const reportSection = document.getElementById('similarity-report-section');
+    const summaryElement = document.getElementById('similarity-summary');
+    const listElement = document.getElementById('similar-phrases-list');
+
+    if (similarityReport) {
+        summaryElement.textContent = similarityReport.reportSummary || "유사성 분석 중 오류가 발생했습니다.";
+        
+        listElement.innerHTML = ''; // Clear list
+        if (similarityReport.highlySimilarPhrases && similarityReport.highlySimilarPhrases.length > 0) {
+            similarityReport.highlySimilarPhrases.forEach(phrase => {
+                const li = document.createElement('li');
+                li.textContent = `"${phrase}"`;
+                listElement.appendChild(li);
+            });
+        } else {
+            const li = document.createElement('li');
+            li.textContent = "특별히 겹치는 문구가 발견되지 않았습니다.";
+            listElement.appendChild(li);
+        }
+        reportSection.classList.remove('hidden'); // Show the whole section
+    }
+    // --- END: NEW: Render Similarity Report ---
 }
 // --- END: MODIFIED renderAnalysisReport Function ---
 
@@ -441,6 +482,11 @@ function renderQuestionInputs(questions) {
     aiQuestions = questions;
     const container = document.getElementById('questions-container');
     container.innerHTML = '';
+    if (!questions || questions.length === 0) {
+        console.error("AI가 질문을 반환하지 않았습니다.");
+        container.innerHTML = "<p>오류: AI로부터 질문을 받는 데 실패했습니다.</p>";
+        return;
+    }
     questions.forEach((q, index) => {
         const card = document.createElement('div');
         card.className = 'question-card';
@@ -484,29 +530,19 @@ function renderFusionReport(data) {
 }
 
 // --- Utility Functions ---
-
-// --- START: UTILITY FUNCTION for Text Count-Up ---
-/**
- * 숫자 카운트업 애니메이션
- * @param {HTMLElement} obj - 텍스트를 표시할 DOM 요소
- * @param {number} start - 시작 숫자
- * @param {number} end - 종료 숫자
- * @param {number} duration - 애니메이션 시간 (ms)
- */
 function animateValue(obj, start, end, duration) {
     let startTimestamp = null;
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
         const currentValue = Math.floor(progress * (end - start) + start);
-        obj.textContent = currentValue + "%"; // SVG <text> 요소에는 textContent 사용
+        obj.textContent = currentValue + "%";
         if (progress < 1) {
             window.requestAnimationFrame(step);
         }
     };
     window.requestAnimationFrame(step);
 }
-// --- END: UTILITY FUNCTION ---
 
 function handleCopyResult() {
     navigator.clipboard.writeText(fusionResultForCopy).then(() => {
