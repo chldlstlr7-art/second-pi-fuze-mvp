@@ -7,6 +7,7 @@
     <style>
         :root {
             --primary-color: #059669; /* 조교/교수용 메인 색상 (Green) */
+            --warning-color: #F59E0B; /* 경고/유사성 색상 */
             --bg-color: #F8FAFC;
             --card-bg: #FFFFFF;
             --text-dark: #1F2937;
@@ -112,6 +113,40 @@
              color: var(--primary-color);
         }
 
+        /* --- START: NEW SIMILARITY CARD STYLES --- */
+        #result-similar-phrases {
+            list-style-type: none; /* 기본 리스트 스타일 제거 */
+            padding-left: 0;
+        }
+        #result-similar-phrases li.similarity-card {
+            border: 1px solid #FCD34D; /* 경고 테두리 */
+            background-color: #FFFBEB; /* 경고 배경 */
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+        }
+        .suspicious-phrase {
+            font-style: italic;
+            color: var(--text-dark);
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-weight: 500;
+            font-size: 1.1em;
+            border-left: 4px solid var(--warning-color); /* 좌측 강조선 */
+            padding-left: 10px;
+        }
+        .suspicious-details {
+            font-size: 0.95em;
+            color: var(--text-light);
+            line-height: 1.6;
+            padding-left: 14px; /* 인용구와 맞춤 */
+        }
+        .suspicious-details strong {
+            color: #D97706; /* 경고 텍스트 (다크) */
+            font-weight: 600;
+        }
+        /* --- END: NEW SIMILARITY CARD STYLES --- */
+
     </style>
 </head>
 <body>
@@ -146,9 +181,9 @@
                     </ul>
             </div>
             
-            <div class="report-output" style="margin-top: 20px; background-color: #FFFBEB;">
+            <div class="report-output" style="margin-top: 20px; background-color: #F9FAFB;">
                 <h3 style="color: #D97706;">유사 의심 문구 (참고)</h3>
-                <ul id="result-similar-phrases" style="list-style-type: '⚠️ ';">
+                <ul id="result-similar-phrases">
                     </ul>
             </div>
 
@@ -180,7 +215,8 @@
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초
 
         try {
-            const response = await fetch('/api/ta', { // 동일한 API 엔드포인트 사용
+            // (수정) : API 엔드포인트
+            const response = await fetch('/api/ta', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -214,7 +250,7 @@
             return;
         }
         
-        // 학생용 stage('analyze', 'fuse')와 구분되는 새로운 stage 이름 사용
+        // (수정) : TA용 stage 이름
         const data = await callApi({ 
             stage: 'assess_report', 
             reportText: reportText 
@@ -231,7 +267,7 @@
         }
     }
 
-    // --- Step 2: Render Report ---
+    // --- Step 2: Render Report (수정됨) ---
     function renderAssessmentReport(data) {
         const { summary, originalityDraft, keyStrengths, areasForImprovement, similarPhrases } = data;
 
@@ -241,29 +277,45 @@
         // 강점 및 개선점 렌더링
         const keyPointsList = document.getElementById('result-key-points');
         keyPointsList.innerHTML = '';
-        keyStrengths.forEach(point => {
-            const li = document.createElement('li');
-            li.innerHTML = `<strong>[강점]</strong> ${point}`;
-            keyPointsList.appendChild(li);
-        });
-        areasForImprovement.forEach(point => {
-            const li = document.createElement('li');
-            li.innerHTML = `<strong>[개선점]</strong> ${point}`;
-            keyPointsList.appendChild(li);
-        });
-
-        // 유사 의심 문구 렌더링
-        const similarList = document.getElementById('result-similar-phrases');
-        similarList.innerHTML = '';
-        if (similarPhrases && similarPhrases.length > 0) {
-            similarPhrases.forEach(phrase => {
+        if (keyStrengths) {
+            keyStrengths.forEach(point => {
                 const li = document.createElement('li');
-                li.textContent = `"${phrase}"`;
+                li.innerHTML = `<strong>[강점]</strong> ${point}`;
+                keyPointsList.appendChild(li);
+            });
+        }
+        if (areasForImprovement) {
+            areasForImprovement.forEach(point => {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>[개선점]</strong> ${point}`;
+                keyPointsList.appendChild(li);
+            });
+        }
+
+        // --- (수정) : 상세 유사성 카드 렌더링 ---
+        const similarList = document.getElementById('result-similar-phrases');
+        similarList.innerHTML = ''; // 리스트 초기화
+        
+        if (similarPhrases && similarPhrases.length > 0) {
+            similarPhrases.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'similarity-card'; // CSS 클래스 적용
+                
+                // HTML 구조로 상세 정보 삽입
+                li.innerHTML = `
+                    <p class="suspicious-phrase">"${item.phrase}"</p>
+                    <div class="suspicious-details">
+                        <strong>유사 출처 (추정):</strong> ${item.likelySource}<br>
+                        <strong>유사성 유형:</strong> ${item.similarityType}
+                    </div>
+                `;
                 similarList.appendChild(li);
             });
         } else {
-            similarList.innerHTML = '<li>특별히 감지된 유사 문구가 없습니다.</li>';
+            // 유사 문구가 없을 경우
+            similarList.innerHTML = '<li style="list-style-type: none; color: #6B7280;">특별히 감지된 표면적 유사 문구가 없습니다.</li>';
         }
+        // --- (수정 완료) ---
     }
 </script>
 </body>
