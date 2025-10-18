@@ -100,15 +100,16 @@
         h4 { font-size: 1.2em; margin-bottom: 10px; }
         .analysis-section { margin-bottom: 40px; }
         
+        #core-summary-list { list-style-type: decimal; padding-left: 20px; }
+        #core-summary-list li { margin-bottom: 10px; line-height: 1.6; }
+        
+        .gauges-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; text-align: center; }
+        
         .report-item { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
-        .report-item p { margin: 5px 0; line-height: 1.6; }
-        .report-item strong { color: var(--text-dark); }
         .similarity-bar-container { width: 100%; background-color: var(--border-color); border-radius: 5px; height: 10px; margin-top: 10px; overflow: hidden; }
         .similarity-bar { background-color: var(--warning-color); height: 100%; border-radius: 5px; transition: width 1s ease-in-out; }
         
-        .similarity-tag {
-            display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold;
-        }
+        .similarity-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; }
         .level-매우높음 { background-color: #991B1B; color: white; }
         .level-높음 { background-color: var(--danger-color); color: white; }
         .level-주의 { background-color: var(--warning-color); color: white; }
@@ -116,44 +117,25 @@
         .level-낮음 { background-color: #A7F3D0; color: #064E3B; }
         .level-매우낮음 { background-color: #D1FAE5; color: #065F46; }
 
+        details { border: 1px solid var(--border-color); border-radius: 8px; margin-top: 30px; }
+        summary { cursor: pointer; padding: 15px; font-weight: bold; color: var(--text-dark); list-style-type: '🧠'; margin-left: 10px;}
+        details[open] summary { border-bottom: 1px solid var(--border-color); }
+        .details-content { padding: 0 15px 15px 15px; }
+        .details-content .report-item { border-left-width: 5px; }
+        .details-content .report-item.knowledge { border-left-color: var(--text-light); }
+
+
         .question-card { margin-bottom: 20px; background-color: #F9FAFB; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
         .question-card label { font-weight: bold; display: block; margin-bottom: 10px; }
         .question-card textarea { min-height: 80px; }
 
-        .fusion-analysis-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 35px; /* 화살표를 위한 공간 */
-            margin-bottom: 30px;
-            position: relative;
-        }
-        .analysis-item {
-            background-color: var(--bg-color);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            position: relative;
-            border-left-width: 5px; 
-        }
-        .analysis-item:not(:last-child)::after {
-            content: '▼';
-            position: absolute;
-            bottom: -28px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 20px;
-            color: var(--border-color);
-            z-index: 1;
-        }
+        .fusion-analysis-grid { display: flex; flex-direction: column; gap: 35px; margin-bottom: 30px; position: relative; }
+        .analysis-item { background-color: var(--bg-color); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); position: relative; border-left-width: 5px; }
+        .analysis-item:not(:last-child)::after { content: '▼'; position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%); font-size: 20px; color: var(--border-color); z-index: 1; }
         .analysis-item.original { border-left-color: #9CA3AF; }
         .analysis-item.change { border-left-color: var(--warning-color); }
         .analysis-item.conclusion { border-left-color: var(--secondary-color); }
-        .analysis-item h4 {
-            margin-top: 0;
-            padding-bottom: 8px;
-            border-bottom: 2px solid;
-            display: inline-block;
-        }
+        .analysis-item h4 { margin-top: 0; padding-bottom: 8px; border-bottom: 2px solid; display: inline-block; }
         .analysis-item.original h4 { color: #9CA3AF; border-color: #E5E7EB; }
         .analysis-item.change h4 { color: #B45309; border-color: #FDE68A; }
         .analysis-item.conclusion h4 { color: #047857; border-color: #A7F3D0; }
