@@ -168,140 +168,16 @@
         <div id="loading-spinner" class="spinner hidden"></div>
     </div>
     
+    <!-- External Libraries for file processing -->
     <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
     </script>
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const userData = localStorage.getItem('pi-fuze-user');
-        if (!userData) {
-            handleError("로그인이 필요합니다.", false);
-            setTimeout(() => window.location.href = '/', 2000);
-            return;
-        }
-        const user = JSON.parse(userData);
-        document.getElementById('welcome-message').textContent = `${user.userName}님, 환영합니다!`;
-        
-        const fileHandlingElements = {
-            dropArea: document.getElementById('file-drop-area'),
-            fileInput: document.getElementById('file-upload'),
-            fileNameDisplay: document.getElementById('file-name'),
-            ideaTextarea: document.getElementById('idea-input'),
-            spinner: document.getElementById('loading-spinner')
-        };
-        setupFileHandling(fileHandlingElements);
-    });
+    <!-- All logic is now in student-app.js -->
+    <script src="student-app.js" type="module"></script>
 
-    function setupFileHandling({ dropArea, fileInput, fileNameDisplay, ideaTextarea, spinner }) {
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
-            document.body.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
-        });
-        ['dragenter', 'dragover'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false));
-        ['dragleave', 'drop'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false));
-        
-        dropArea.addEventListener('drop', e => handleFiles(e.dataTransfer.files), false);
-        dropArea.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', e => handleFiles(e.target.files));
-
-        async function handleFiles(files) {
-            if (files.length > 1) { return alert("하나의 파일만 업로드할 수 있습니다."); }
-            const file = files[0];
-            const validTypes = ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-            if (!validTypes.includes(file.type)) { return alert("허용된 파일 형식이 아닙니다. (.txt, .pdf, .docx)"); }
-
-            fileNameDisplay.textContent = `파일 처리 중: ${file.name}`;
-            spinner.classList.remove('hidden');
-            ideaTextarea.value = '';
-
-            try {
-                let text = '';
-                if (file.type === 'text/plain') text = await file.text();
-                else if (file.type === 'application/pdf') text = await extractTextFromPdf(file);
-                else if (file.type.includes('wordprocessingml')) text = await extractTextFromDocx(file);
-                
-                ideaTextarea.value = text;
-                fileNameDisplay.textContent = `파일 로드 완료: ${file.name}`;
-            } catch (error) {
-                handleError(`파일 처리 실패: ${error.message}`);
-                fileNameDisplay.textContent = "";
-            } finally {
-                spinner.classList.add('hidden');
-            }
-        }
-        
-        function extractTextFromDocx(file) { /* ... implementation from previous response ... */ }
-        async function extractTextFromPdf(file) { /* ... implementation from previous response ... */ }
-    }
-
-    let originalIdea = '', aiQuestions = [], fusionResultForCopy = '';
-    const stages = { input: document.getElementById('stage-input'), analysis: document.getElementById('stage-analysis'), questions: document.getElementById('stage-questions'), fusion: document.getElementById('stage-fusion') };
-    const steps = { 1: document.getElementById('step-1'), 2: document.getElementById('step-2'), 3: document.getElementById('step-3') };
-    const spinner = document.getElementById('loading-spinner');
-    
-    document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
-    document.getElementById('btn-retry').addEventListener('click', () => {
-        document.getElementById('error-message-container').classList.add('hidden');
-        stages.input.classList.remove('finalized');
-        stages.input.querySelectorAll('button, textarea').forEach(el => el.disabled = false);
-        updateProgressBar('input');
-    });
-
-    function updateProgressBar(stageName) { /* ... */ }
-    function revealStage(stageName) { /* ... */ }
-    function finalizeStage(stageName) { /* ... */ }
-
-    function handleError(message, showRetry = true) {
-        const errorContainer = document.getElementById('error-message-container');
-        document.getElementById('error-text').textContent = message;
-        errorContainer.classList.remove('hidden');
-        document.getElementById('btn-retry').style.display = showRetry ? 'inline-block' : 'none';
-        errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        spinner.classList.add('hidden');
-    }
-
-    async function callApi(body) {
-        spinner.classList.remove('hidden');
-        spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
-        try {
-            const response = await fetch('/api/student', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error || `서버 오류: ${response.statusText}`);
-            }
-            return await response.json();
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                handleError('AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요.');
-            } else {
-                handleError(`분석 중 오류가 발생했습니다: ${error.message}`);
-            }
-            return null; // Return null on error
-        } finally {
-            spinner.classList.add('hidden');
-        }
-    }
-
-    async function handleAnalysisRequest() { /* ... */ }
-    async function handleFusionRequest() { /* ... */ }
-    function renderAnalysisReport(data) { /* ... */ }
-    function renderQuestionInputs(questions) { /* ... */ }
-    function renderFusionReport(data) { /* ... */ }
-    function handleCopyResult() { /* ... */ }
-    function handleFeedback(isHelpful) { /* ... */ }
-    function animateValue(obj, start, end, duration) { /* ... */ }
-</script>
 </body>
 </html>
 
