@@ -9,17 +9,17 @@ const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash", 
 });
 
-// --- 프롬프트 엔지니어링 (유사성 검사 - 느슨한 기준) ---
+// --- 프롬프트 엔지니어링 (유사성 검사 - '엄격한' 기준) ---
 const promptForSimilarity = `
 You are an expert academic Teaching Assistant (TA).
-Your task is *only* to perform a similarity check on the following student report.
+Your task is *only* to perform a strict similarity check on the following student report.
 
-**Similarity Analysis Rules (Important - Be 'Broader/Generous'):**
-For the 'similarPhrases' section, adopt a *broader (느슨한)* standard. 
-This includes not just direct overlaps, but also:
-1.  Closely paraphrased sentences that follow the original source's structure.
-2.  Standard definitions or common knowledge presented as if it were the user's own insight (lack of citation).
-The goal is to flag areas for *review*, not just confirm plagiarism.
+**Similarity Analysis Rules (Important - Be 'Strict'):**
+For the 'similarPhrases' section, adopt a *very strict (깐깐한)* standard. 
+Focus *only* on high-confidence matches that strongly suggest a lack of originality. This includes:
+1.  Direct word-for-word plagiarism (문자 그대로 복사-붙여넣기).
+2.  Sentences that are only minimally changed (e.g., only a few words swapped or reordered).
+*Do NOT* flag common knowledge, standard definitions (unless copied verbatim without quotes), or properly paraphrased arguments.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
@@ -29,10 +29,10 @@ The goal is to flag areas for *review*, not just confirm plagiarism.
 {
   "similarPhrases": [
     {
-      "phrase": "<The specific phrase from the student's report that meets the 'Broader' criteria.>",
+      "phrase": "<The specific phrase from the student's report that meets the 'Strict' criteria.>",
       "likelySource": "<Name of the specific source (e.g., '위키피디아 [토픽] 항목', '특정 논문 제목').>",
       "sourceURL": "<CRITICAL: *You must attempt to provide a direct URL* to the 'likelySource'. If you identified a specific public source, provide its full URL. If a specific URL cannot be recalled, state 'N/A'.>",
-      "similarityType": "<Explain *how* it's similar based on the 'Broader' rules (e.g., '표준 정의를 출처 표기 없이 그대로 인용함', '특정 자료의 문장 구조와 매우 흡사하게 의역됨').>"
+      "similarityType": "<Explain *how* it's similar based on the 'Strict' rules (e.g., '특정 소스의 문장과 단어 몇 개만 다르고 동일함', '출처 표기 없이 원문을 그대로 복사함').>"
     }
   ]
 }
