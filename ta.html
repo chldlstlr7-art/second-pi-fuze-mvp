@@ -57,17 +57,9 @@
             background-color: #EFF6FF;
             border-color: var(--primary-color);
         }
-        #file-input {
-            display: none; 
-        }
-        #file-list-container {
-            margin-top: 20px;
-        }
-        #file-list {
-            list-style-type: none;
-            padding-left: 0;
-            margin: 0;
-        }
+        #file-input { display: none; }
+        #file-list-container { margin-top: 20px; }
+        #file-list { list-style-type: none; padding-left: 0; margin: 0; }
         #file-list li {
             background-color: #F9FAFB;
             border: 1px solid var(--border-color);
@@ -107,7 +99,6 @@
         button:hover { background: #047857; }
         button:disabled { background: #D1D5DB; cursor: not-allowed; }
         
-        /* --- (신규) 작은 스피너 --- */
         .spinner-small { 
             width: 20px; 
             height: 20px; 
@@ -120,9 +111,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* 결과물 섹션 (변경 없음) */
-        #stage-result {
-            padding-top: 20px;
-        }
+        #stage-result { padding-top: 20px; }
         #stage-result .card h2 {
             font-size: 1.8em;
             color: var(--primary-color);
@@ -130,9 +119,7 @@
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 15px;
         }
-        #stage-result .card.error-card h2 {
-            color: #DC2626; /* Red */
-        }
+        #stage-result .card.error-card h2 { color: #DC2626; }
 
         h3 { 
             font-size: 1.4em; 
@@ -148,7 +135,6 @@
             border: 1px solid var(--border-color);
             margin-top: 20px;
         }
-        /* (신규) 스피너를 담을 플레이스홀더 */
         .report-section-placeholder {
              padding: 25px;
              background-color: #F9FAFB;
@@ -167,15 +153,47 @@
             line-height: 1.7;
             margin-top: 0;
         }
-        .report-output ul {
-            padding-left: 20px;
+        .report-output ul { padding-left: 20px; }
+        .report-output ul li { margin-bottom: 10px; }
+        .report-output strong { color: var(--primary-color); }
+        
+        /* --- (신규) 종합 점수 스타일 --- */
+        .eval-container {
+            display: flex;
+            gap: 25px;
+            align-items: flex-start;
         }
-        .report-output ul li {
-            margin-bottom: 10px;
+        .score-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            flex-shrink: 0;
         }
-        .report-output strong {
-             color: var(--primary-color);
+        .score-circle span {
+            font-size: 2.5em;
+            line-height: 1.1;
         }
+        .score-circle small {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .eval-draft {
+            flex-grow: 1;
+        }
+        .eval-draft p {
+            font-style: italic;
+            color: var(--text-light);
+            margin-top: 0;
+        }
+
+        /* 유사성 검토 스타일 (변경 없음) */
         #result-similar-phrases {
             list-style-type: none;
             padding-left: 0;
@@ -253,7 +271,7 @@
 
 <script>
     // --- 글로벌 상태 ---
-    let filesToAnalyze = []; // { name: string, text: string, error?: string }
+    let filesToAnalyze = []; 
 
     // --- DOM Elements ---
     const inputStage = document.getElementById('stage-input');
@@ -266,7 +284,6 @@
     const fileInput = document.getElementById('file-input');
     const fileList = document.getElementById('file-list');
     
-    // PDF.js worker 설정
     if (window.pdfjsLib) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
     }
@@ -297,14 +314,14 @@
         const files = fileInput.files;
         if (!files || files.length === 0) return;
 
-        filesToAnalyze = []; // 글로벌 목록 초기화
+        filesToAnalyze = []; 
         fileList.innerHTML = `<li><span class="status-text">${files.length}개 파일 읽는 중...</span></li>`;
 
         const extractionPromises = Array.from(files).map(processFile);
         const results = await Promise.all(extractionPromises);
-        filesToAnalyze = results; // 글로벌 상태에 저장
+        filesToAnalyze = results; 
         
-        fileList.innerHTML = ''; // 목록 비우기
+        fileList.innerHTML = ''; 
         filesToAnalyze.forEach(file => {
             const li = document.createElement('li');
             let statusHtml = '';
@@ -378,7 +395,7 @@
         });
     }
 
-    // --- (신규) 범용 API 호출 함수 ---
+    // --- 범용 API 호출 함수 ---
     async function callApiEndpoint(url, body) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2분 타임아웃
@@ -399,7 +416,7 @@
             }
             return await response.json(); 
         } catch (error) {
-            clearTimeout(timeoutId); // 다른 에러 발생 시에도 타임아웃 클리어
+            clearTimeout(timeoutId); 
             if (error.name === 'AbortError') {
                  throw new Error('AI 응답 시간이 2분을 초과했습니다. (Timeout)');
             }
@@ -430,15 +447,15 @@
             // 1. 각 파일의 고유 ID 생성
             const fileId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
             
-            // 2. 즉시 플레이스홀더(로딩 카드) 생성
+            // 2. 즉시 플레이스홀더(로딩 카드) 생성 (수정: 평가 섹션 제목 변경)
             const placeholderHtml = `
                 <div id="${fileId}" class="card">
                     <h2>${escapeHTML(file.name)}</h2>
+                    <div id="eval-${fileId}" class="report-section-placeholder">
+                        <h3>종합 점수 및 평가</h3><div class="spinner-small"></div>
+                    </div>
                     <div id="summary-${fileId}" class="report-section-placeholder">
                         <h3>핵심 요약</h3><div class="spinner-small"></div>
-                    </div>
-                    <div id="eval-${fileId}" class="report-section-placeholder">
-                        <h3>독창성 평가 (초안)</h3><div class="spinner-small"></div>
                     </div>
                     <div id="sim-${fileId}" class="report-section-placeholder">
                         <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3><div class="spinner-small"></div>
@@ -464,7 +481,7 @@
                     document.getElementById(`eval-${fileId}`).innerHTML = renderEvaluationHtml(data);
                 })
                 .catch(error => {
-                    document.getElementById(`eval-${fileId}`).innerHTML = renderErrorHtml("독창성 평가", error.message);
+                    document.getElementById(`eval-${fileId}`).innerHTML = renderErrorHtml("종합 점수 및 평가", error.message);
                 });
 
             // 유사성 (api/ta-similarity.js)
@@ -489,35 +506,32 @@
         `;
     }
 
+    // --- (수정) 점수/평가 렌더링 함수 ---
     function renderEvaluationHtml(data) {
-        const { originalityDraft, keyStrengths, areasForImprovement } = data;
-        let keyPointsHtml = '';
+        const { overallScore, originalityDraft } = data;
 
-        if (keyStrengths && keyStrengths.length > 0) {
-            keyPointsHtml += keyStrengths.map(point => 
-                `<li><strong>[강점]</strong> ${escapeHTML(point)}</li>`
-            ).join('');
-        }
-        if (areasForImprovement && areasForImprovement.length > 0) {
-             keyPointsHtml += areasForImprovement.map(point => 
-                `<li><strong>[개선점]</strong> ${escapeHTML(point)}</li>`
-            ).join('');
-        }
-        if (keyPointsHtml === '') {
-            keyPointsHtml = '<li>분석된 강점/개선점이 없습니다.</li>';
-        }
+        // 점수에 따라 색상 변경 (옵션)
+        let scoreColor = 'var(--primary-color)';
+        if (overallScore < 70) scoreColor = '#F59E0B'; // Amber
+        if (overallScore < 50) scoreColor = '#EF4444'; // Red
 
         return `
             <div class="report-output">
-                <h3>독창성 평가 (초안)</h3>
-                <p>${escapeHTML(originalityDraft)}</p>
-                <ul id="result-key-points">
-                    ${keyPointsHtml}
-                </ul>
+                <h3>종합 점수 및 평가</h3>
+                <div class="eval-container">
+                    <div class="score-circle" style="background-color: ${scoreColor};">
+                        <span>${escapeHTML(overallScore)}</span>
+                        <small>점</small>
+                    </div>
+                    <div class="eval-draft">
+                        <p>${escapeHTML(originalityDraft)}</p>
+                    </div>
+                </div>
             </div>
         `;
     }
 
+    // --- (수정) 유사성 렌더링 함수 (기준 문구 변경) ---
     function renderSimilarityHtml(data) {
         const { similarPhrases } = data;
         let similarListHtml = '';
@@ -543,7 +557,8 @@
                 `;
             }).join('');
         } else {
-            similarListHtml = '<li style="list-style-type: none; color: #6B7280;">엄격한 기준(직접 인용, 최소 변경)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
+            // (수정) '느슨한 기준'으로 문구 변경
+            similarListHtml = '<li style="list-style-type: none; color: #6B7280;">느슨한 기준(유사 의역, 표준 정의 등)에 부합하는 유사 문구가 감지되지 않았습니다.</li>';
         }
 
         return `
