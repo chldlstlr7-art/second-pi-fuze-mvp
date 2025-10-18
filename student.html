@@ -9,6 +9,7 @@
             --primary-color: #3B82F6;
             --secondary-color: #10B981;
             --warning-color: #F59E0B;
+            --danger-color: #EF4444;
             --bg-color: #F8FAFC;
             --card-bg: #FFFFFF;
             --text-dark: #1F2937;
@@ -93,6 +94,21 @@
         .report-item strong { color: var(--text-dark); }
         .similarity-bar-container { width: 100%; background-color: var(--border-color); border-radius: 5px; height: 10px; margin-top: 10px; overflow: hidden; }
         .similarity-bar { background-color: var(--warning-color); height: 100%; border-radius: 5px; transition: width 1s ease-in-out; }
+        
+        /* New Similarity Level Tag Styles */
+        .similarity-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: white;
+        }
+        .level-매우높음, .level-높음 { background-color: var(--danger-color); }
+        .level-주의 { background-color: var(--warning-color); }
+        .level-보통 { background-color: #8B5CF6; }
+        .level-낮음, .level-매우낮음 { background-color: var(--secondary-color); }
+
 
         .question-card { margin-bottom: 20px; background-color: #F9FAFB; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
         .question-card label { font-weight: bold; display: block; margin-bottom: 10px; }
@@ -349,6 +365,8 @@
         const { originalityScore, overallAssessment, judgmentCriteria, plagiarismReport, documentType } = data;
         const analysisStage = stages.analysis;
 
+        let criteriaHTML = judgmentCriteria.map(item => `<li>${item}</li>`).join('');
+
         let reportHTML = `
             <h2>1. 독창성 진단 리포트 <span style="font-size: 0.6em; color: var(--text-light); font-weight: 500;">(분석 유형: ${documentType})</span></h2>
             <div class="analysis-section">
@@ -364,9 +382,7 @@
                 </div>
                 <div class="criteria-container">
                     <h3>판단 기준</h3>
-                    <ul class="criteria-list">
-                        ${judgmentCriteria.map(item => `<li>${item}</li>`).join('')}
-                    </ul>
+                    <ul class="criteria-list">${criteriaHTML}</ul>
                 </div>
             </div>
             <div class="analysis-section">
@@ -407,11 +423,14 @@
             const structuralSection = document.createElement('div');
             structuralSection.innerHTML = `<h4 style="margin-top: 30px;">구조적 표절 분석</h4>`;
             plagiarismReport.structuralPlagiarism.forEach(item => {
+                const levelClass = `level-${item.similarityLevel.replace(' ', '')}`;
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'report-item';
                 itemDiv.innerHTML = `
+                    <p><strong>유사도 수준:</strong> <span class="similarity-tag ${levelClass}">${item.similarityLevel}</span></p>
                     <p><strong>유사 논리 구조:</strong> ${item.sourceLogic}</p>
                     <p><strong>유사 지점:</strong> ${item.pointOfSimilarity}</p>
+                    <p><strong>참고 링크:</strong> <a href="${item.sourceLink}" target="_blank" rel="noopener noreferrer">${item.sourceLink || '제공된 링크 없음'}</a></p>
                 `;
                 structuralSection.appendChild(itemDiv);
             });
@@ -430,7 +449,7 @@
             <h2>2. 창의적 도발 질문</h2>
             <p>AI가 제안한 아래 질문들에 답변하며 글을 발전시켜 보세요.</p>
             <div id="questions-container-dynamic">
-                ${questions.map((q, index) => `
+                ${(questions || []).map((q, index) => `
                     <div class="question-card">
                         <label for="answer-${index}">질문 ${index + 1}: ${q}</label>
                         <textarea id="answer-${index}" placeholder="답변을 입력하세요..."></textarea>
@@ -455,7 +474,7 @@
             <p>${connection}</p>
             <div class="fusion-features">
                 <h3>주요 특징</h3>
-                <ul>${keyFeatures.map(f => `<li>${f}</li>`).join('')}</ul>
+                <ul>${(keyFeatures || []).map(f => `<li>${f}</li>`).join('')}</ul>
             </div>
             <div class="action-buttons-container">
                 <button id="btn-copy-result-dynamic">결과 텍스트로 복사</button>
@@ -476,7 +495,7 @@
         document.getElementById('btn-feedback-no-dynamic').addEventListener('click', () => handleFeedback(false));
         document.getElementById('btn-restart-dynamic').addEventListener('click', () => location.reload());
 
-        fusionResultForCopy = `## 최종 제안: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${keyFeatures.map(f => `- ${f}`).join('\n')}`;
+        fusionResultForCopy = `## 최종 제안: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${(keyFeatures || []).map(f => `- ${f}`).join('\n')}`;
     }
 
     function handleCopyResult() {
