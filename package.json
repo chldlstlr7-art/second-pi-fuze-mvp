@@ -1,0 +1,16 @@
+{
+  "name": "pi-fuze-mvp",
+  "version": "1.0.0",
+  "description": "PI-Fuze MVP",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "openai": "^4.0.0"
+  }
+}
