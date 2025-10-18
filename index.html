@@ -84,37 +84,26 @@
         .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 20px; }
         .gauge-container { text-align: center; }
         
-        /* --- START: NEW DONUT CHART STYLES --- */
-        .donut-chart-container {
-            width: 150px; 
-            height: 150px; 
-            margin: 10px auto; /* 상단 h3와 간격 추가 */
+        /* --- START: NEW SEMI-CIRCLE CHART STYLES --- */
+        .gauge-svg-container {
+            width: 200px; /* SVG 너비와 일치 */
+            height: 120px; /* SVG 높이와 일치 */
+            margin: 10px auto;
             position: relative;
         }
-        .donut-chart-container svg {
-            transform: rotate(-90deg); /* 원이 위에서부터 시작하도록 회전 */
-        }
-        .donut-bg {
-            stroke: var(--border-color); /* 차트 배경색 */
-            stroke-width: 15;
-            fill: none;
-        }
-        .donut-fg {
-            stroke: url(#gaugeGradient); /* 그라데이션 적용 */
-            stroke-width: 15;
-            fill: none;
-            stroke-linecap: round; /* 선 끝을 둥글게 */
+        #semi-circle-fg {
+            /* 총 경로 길이 (반지름 80의 반원) = π * r = 3.14159 * 80 ≈ 251.33 */
+            stroke-dasharray: 251.33;
+            stroke-dashoffset: 251.33; /* 0%에서 시작 (완전히 비어있음) */
             transition: stroke-dashoffset 1.2s ease-in-out; /* 부드러운 애니메이션 */
         }
-        .donut-text {
+        #gauge-text {
             font-size: 28px;
             font-weight: bold;
             fill: var(--text-dark);
-            transform: rotate(90deg); /* SVG 전체 회전에 맞춰 텍스트만 바로 세움 */
-            transform-origin: 50% 50%;
             text-anchor: middle;
         }
-        /* --- END: NEW DONUT CHART STYLES --- */
+        /* --- END: NEW SEMI-CIRCLE CHART STYLES --- */
 
         .comparison-card { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
         .comparison-card h4 { margin-top: 0; color: var(--primary-color); font-size: 1.2em;}
@@ -186,8 +175,8 @@
                 <div class="gauge-container">
                     <h3>구조적 독창성</h3>
                     
-                    <div class="donut-chart-container">
-                        <svg width="150" height="150" viewBox="0 0 120 120">
+                    <div class="gauge-svg-container">
+                        <svg width="200" height="120" viewBox="0 0 200 120">
                             <defs>
                                 <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                                     <stop offset="0%" stop-color="#D0021B"/>
@@ -195,10 +184,16 @@
                                     <stop offset="100%" stop-color="#50E3C2"/>
                                 </linearGradient>
                             </defs>
-                            <circle class="donut-bg" cx="60" cy="60" r="50"></circle>
-                            <circle class="donut-fg" id="donut-fg-circle" cx="60" cy="60" r="50"
-                                    stroke-dasharray="314.159" stroke-dashoffset="314.159"></circle>
-                            <text class="donut-text" id="donut-text-label" x="60" y="60" dy="0.3em">0%</text>
+                            
+                            <path id="semi-circle-bg"
+                                  d="M 20 100 A 80 80 0 0 1 180 100" 
+                                  stroke-width="20" stroke="var(--border-color)" fill="none" stroke-linecap="round" />
+                                  
+                            <path id="semi-circle-fg"
+                                  d="M 20 100 A 80 80 0 0 1 180 100"
+                                  stroke-width="20" stroke="url(#gaugeGradient)" fill="none" stroke-linecap="round" />
+                                  
+                            <text id="gauge-text" x="100" y="95" text-anchor="middle">0%</text>
                         </svg>
                     </div>
                     </div>
@@ -402,19 +397,23 @@ async function handleAnalysisRequest() {
 function renderAnalysisReport(data) {
     const { originalityScore, overallAssessment, judgmentCriteria, comparisonAnalysis } = data;
     
-    // --- Render Donut Chart ---
-    const donutFg = document.getElementById('donut-fg-circle');
-    const donutText = document.getElementById('donut-text-label');
-    const circumference = 2 * Math.PI * 50; // 314.159...
+    // --- Render Semi-Circle Chart ---
+    const semiCircleFg = document.getElementById('semi-circle-fg');
+    const gaugeText = document.getElementById('gauge-text');
+    
+    const radius = 80;
+    const circumference = Math.PI * radius; // 반원의 둘레 (π * r)
+    // 251.33 (CSS에 설정된 값)
+    
+    // 점수(%)에 해당하는 offset 계산
+    // (1 - 0.75) * 251.33 = 0.25 * 251.33 = 62.83
     const offset = circumference - (originalityScore / 100) * circumference;
 
-    // SVG 원의 둘레(circumference)를 stroke-dasharray에 설정
-    donutFg.style.strokeDasharray = circumference;
-    // 점수(%)만큼 offset을 설정하여 차트가 차오르게 함
-    donutFg.style.strokeDashoffset = offset;
+    // CSS transition이 이 변경을 애니메이션으로 처리
+    semiCircleFg.style.strokeDashoffset = offset;
     
     // 숫자 카운트업 애니메이션 (아래 animateValue 함수 참조)
-    animateValue(donutText, 0, originalityScore, 1200); // 1.2초 동안
+    animateValue(gaugeText, 0, originalityScore, 1200); // 1.2초 동안
 
     // --- Render Texts ---
     document.getElementById('overall-assessment').textContent = overallAssessment;
@@ -486,7 +485,7 @@ function renderFusionReport(data) {
 
 // --- Utility Functions ---
 
-// --- START: NEW UTILITY FUNCTION for Text Count-Up ---
+// --- START: UTILITY FUNCTION for Text Count-Up ---
 /**
  * 숫자 카운트업 애니메이션
  * @param {HTMLElement} obj - 텍스트를 표시할 DOM 요소
@@ -507,7 +506,7 @@ function animateValue(obj, start, end, duration) {
     };
     window.requestAnimationFrame(step);
 }
-// --- END: NEW UTILITY FUNCTION ---
+// --- END: UTILITY FUNCTION ---
 
 function handleCopyResult() {
     navigator.clipboard.writeText(fusionResultForCopy).then(() => {
