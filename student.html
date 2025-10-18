@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PI-Fuze: Interactive Analysis</title>
+    <title>PI-Fuze: 학생용 분석</title>
     <style>
         :root {
-            --primary-color: #3B82F6; /* A richer, more modern blue */
-            --secondary-color: #10B981; /* A vibrant green for success/positive elements */
-            --warning-color: #F59E0B; /* Amber for similarity points */
-            --bg-color: #F8FAFC; /* A slightly cooler background */
+            --primary-color: #3B82F6;
+            --secondary-color: #10B981;
+            --warning-color: #F59E0B;
+            --bg-color: #F8FAFC;
             --card-bg: #FFFFFF;
             --text-dark: #1F2937;
             --text-light: #6B7280;
@@ -17,19 +17,16 @@
         }
         html { scroll-behavior: smooth; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             margin: 0;
             padding: 20px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
         .container { max-width: 800px; margin: 0 auto; }
         .header { text-align: center; margin-bottom: 40px; }
         .header h1 {
             font-size: 2.5em;
             font-weight: 800;
-            color: var(--text-dark);
             background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -39,7 +36,7 @@
         .progress-bar { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; }
         .progress-bar::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: var(--border-color); z-index: -1; transform: translateY(-50%);}
         .step { flex: 1; text-align: center; color: var(--text-light); font-weight: bold; position: relative; }
-        .step .dot { width: 20px; height: 20px; background-color: var(--border-color); border-radius: 50%; margin: 0 auto 10px; border: 4px solid var(--bg-color); transition: background-color 0.3s ease; }
+        .step .dot { width: 20px; height: 20px; background-color: var(--border-color); border-radius: 50%; margin: 0 auto 10px; border: 4px solid var(--bg-color); }
         .step.active .dot { background-color: var(--primary-color); }
         .step.active { color: var(--primary-color); }
         .card { 
@@ -49,94 +46,43 @@
             margin-bottom: 20px; 
             box-shadow: 0 8px 32px rgba(0, 30, 80, 0.08); 
             border: 1px solid var(--border-color);
-            transition: opacity 0.5s ease-in-out;
         }
-        .card.finalized {
-            opacity: 0.7;
-            background-color: #F9FAFB;
-        }
+        .card.finalized { opacity: 0.7; background-color: #F9FAFB; }
         .hidden { display: none !important; }
 
-        .fade-in {
-            animation: fadeIn 0.6s ease-in-out;
-        }
+        .fade-in { animation: fadeIn 0.6s ease-in-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        textarea { width: 100%; min-height: 150px; padding: 15px; border-radius: 8px; border: 1px solid #D1D5DB; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
-        textarea:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); outline: none; }
+        textarea { width: 100%; min-height: 150px; padding: 15px; border-radius: 8px; border: 1px solid #D1D5DB; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box; }
         
-        button { display: block; width: 100%; padding: 15px; background: linear-gradient(45deg, var(--primary-color), #60A5FA); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; margin-top: 20px; }
-        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
-        button:disabled { background: #D1D5DB; cursor: not-allowed; transform: none; box-shadow: none; }
+        button { display: block; width: 100%; padding: 15px; background: linear-gradient(45deg, var(--primary-color), #60A5FA); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        button:disabled { background: #D1D5DB; cursor: not-allowed; }
         
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-left-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 40px auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
-        /* Analysis Stage Styles */
         h3 { font-size: 1.4em; color: var(--text-dark); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); }
-        .analysis-section { margin-bottom: 30px; }
+        h4 { font-size: 1.2em; color: var(--text-dark); margin-bottom: 10px; }
+        .analysis-section { margin-bottom: 40px; }
         .criteria-list { list-style: none; padding-left: 0; display: flex; flex-wrap: wrap; gap: 10px; }
         .criteria-list li { background-color: #EFF6FF; color: var(--primary-color); padding: 8px 15px; border-radius: 20px; font-size: 0.9em; font-weight: 500; }
         
         .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 20px; }
         .gauge-container { text-align: center; }
         
-        /* --- START: SEMI-CIRCLE CHART STYLES --- */
-        .gauge-svg-container {
-            width: 200px; /* SVG 너비와 일치 */
-            height: 120px; /* SVG 높이와 일치 */
-            margin: 10px auto;
-            position: relative;
-        }
-        #semi-circle-fg {
-            /* 총 경로 길이 (반지름 80의 반원) = π * r = 3.14159 * 80 ≈ 251.33 */
-            stroke-dasharray: 251.33;
-            stroke-dashoffset: 251.33; /* 0%에서 시작 (완전히 비어있음) */
-            transition: stroke-dashoffset 1.2s ease-in-out; /* 부드러운 애니메이션 */
-        }
-        #gauge-text {
-            font-size: 28px;
-            font-weight: bold;
-            fill: var(--text-dark);
-            text-anchor: middle;
-        }
-        /* --- END: SEMI-CIRCLE CHART STYLES --- */
+        .report-item { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
+        .report-item p { margin: 5px 0; line-height: 1.6; }
+        .report-item strong { color: var(--text-dark); }
+        .similarity-bar-container { width: 100%; background-color: var(--border-color); border-radius: 5px; height: 10px; margin-top: 10px; overflow: hidden; }
+        .similarity-bar { background-color: var(--warning-color); height: 100%; border-radius: 5px; transition: width 1s ease-in-out; }
 
-        .comparison-card { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
-        .comparison-card h4 { margin-top: 0; color: var(--primary-color); font-size: 1.2em;}
-        
-        .comparison-point { margin-top: 20px; padding: 20px; border-radius: 8px; }
-        .comparison-point.similar { background-color: #FFFBEB; border-left: 5px solid var(--warning-color); }
-        .comparison-point.different { background-color: #ECFDF5; border-left: 5px solid var(--secondary-color); }
-        .comparison-point h4 { display: flex; align-items: center; gap: 10px; margin-top: 0; font-size: 1.1em; }
-        .comparison-point.similar h4 { color: #D97706; }
-        .comparison-point.different h4 { color: #059669; }
-
-        /* --- START: NEW SIMILARITY REPORT STYLES --- */
-        #similar-phrases-list {
-             padding-left: 20px; 
-             margin-top: 10px; 
-             margin-bottom: 0;
-             list-style-type: '⚠️ '; /* 경고 이모지 */
-        }
-        #similar-phrases-list li {
-            padding-left: 8px; /* 이모지와 텍스트 간격 */
-        }
-        /* --- END: NEW SIMILARITY REPORT STYLES --- */
-
-
-        .nav-button-container { text-align: center; margin-top: 20px; }
-        #btn-show-questions { width: auto; padding: 12px 30px; display: inline-block; background: var(--secondary-color) }
-
-        /* Question Stage Styles */
         .question-card { margin-bottom: 20px; background-color: #F9FAFB; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
         .question-card label { font-weight: bold; display: block; margin-bottom: 10px; color: var(--text-dark); }
         .question-card textarea { min-height: 80px; }
 
-        /* Fusion Stage Styles & New Buttons */
         .fusion-summary { background-color: #EFF6FF; border-left: 5px solid var(--primary-color); padding: 20px; border-radius: 8px; margin-bottom: 20px;}
         .fusion-features ul { list-style-type: none; padding-left: 0; }
         .fusion-features li { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%2310B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>') no-repeat left center; padding-left: 30px; margin-bottom: 15px; line-height: 1.5; }
@@ -144,12 +90,9 @@
         .action-buttons-container { margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; }
         #btn-copy-result { background: var(--secondary-color); margin-bottom: 20px; }
         .feedback-section { text-align: center; }
-        .feedback-section p { font-weight: bold; color: var(--text-light); margin-bottom: 10px;}
         .feedback-buttons { display: flex; justify-content: center; gap: 15px; }
-        .feedback-btn { width: 80px; padding: 10px; font-size: 24px; background: none; border: 2px solid var(--border-color); border-radius: 50px; transition: background-color 0.2s, transform 0.2s; margin: 0; }
-        .feedback-btn:hover { background-color: #f0f0f0; transform: scale(1.1); }
-        .feedback-btn.selected { background-color: var(--secondary-color); border-color: var(--secondary-color); color: white; }
-
+        .feedback-btn { width: 80px; padding: 10px; font-size: 24px; background: none; border: 2px solid var(--border-color); border-radius: 50px; margin: 0; }
+        
         @media (min-width: 768px) {
             .analysis-grid { grid-template-columns: 220px 1fr; align-items: flex-start; }
         }
@@ -159,7 +102,7 @@
 
     <div class="container">
         <div class="header">
-            <h1>PI-Fuze</h1>
+            <h1 id="welcome-message">PI-Fuze</h1>
             <p>AI-TA 기반 아이디어 진단 및 융합 시스템</p>
         </div>
 
@@ -178,83 +121,32 @@
         
         <div id="stage-analysis" class="card hidden">
             <h2>1. 독창성 진단 리포트</h2>
-            
             <div class="analysis-section">
                 <h3>종합 평가</h3>
                 <p id="overall-assessment"></p>
             </div>
-            
             <div class="analysis-grid">
                 <div class="gauge-container">
                     <h3>구조적 독창성</h3>
-                    
-                    <div class="gauge-svg-container">
-                        <svg width="200" height="120" viewBox="0 0 200 120">
-                            <defs>
-                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#D0021B"/>
-                                    <stop offset="50%" stop-color="#F8E71C"/>
-                                    <stop offset="100%" stop-color="#50E3C2"/>
-                                </linearGradient>
-                            </defs>
-                            <path id="semi-circle-bg"
-                                  d="M 20 100 A 80 80 0 0 1 180 100" 
-                                  stroke-width="20" stroke="var(--border-color)" fill="none" stroke-linecap="round" />
-                            <path id="semi-circle-fg"
-                                  d="M 20 100 A 80 80 0 0 1 180 100"
-                                  stroke-width="20" stroke="url(#gaugeGradient)" fill="none" stroke-linecap="round" />
-                            <text id="gauge-text" x="100" y="95" text-anchor="middle">0%</text>
-                        </svg>
-                    </div>
+                    <svg width="200" height="120" viewBox="0 0 200 120">
+                        <defs><linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#D0021B"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#50E3C2"/></linearGradient></defs><path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" /><path id="gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#gaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3; transition: stroke-dashoffset 1.2s ease-in-out;"/><text id="gauge-text" x="100" y="95" text-anchor="middle" font-size="28px" font-weight="bold">0%</text>
+                    </svg>
                 </div>
                 <div class="criteria-container">
                     <h3>판단 기준</h3>
                     <ul id="criteria-list" class="criteria-list"></ul>
                 </div>
             </div>
-
+            
+            <!-- Plagiarism Report Section -->
             <div class="analysis-section">
-                <h3>유사 사례 심층 분석</h3>
-                <div class="comparison-card">
-                    <h4>유사사례: <span id="comparison-name" style="font-weight:bold;"></span></h4>
-                    <p id="comparison-desc"></p>
-                </div>
-                <div class="comparison-point similar">
-                    <h4>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
-                        구조적 유사점
-                    </h4>
-                    <p id="points-similarity"></p>
-                </div>
-                <div class="comparison-point different">
-                    <h4>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
-                        차별점 및 독창성
-                    </h4>
-                    <p id="points-difference"></p>
+                <h3>표절 검사 상세 리포트</h3>
+                <div id="plagiarism-report-container">
+                    <!-- This will be populated by JavaScript -->
                 </div>
             </div>
 
-            <div class="analysis-section hidden" id="similarity-report-section" style="margin-top: 30px;">
-                <h3 style="border: none; margin-bottom: 15px;">텍스트 유사성 리포트 (주의)</h3>
-                <div class="comparison-point similar"> 
-                    <h4 style="color: #D97706; display: flex; align-items: center; gap: 10px;">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>
-                        종합 요약
-                    </h4>
-                    <p id="similarity-summary" style="margin-top: 5px;"></p>
-                    
-                    <h4 style="color: #D97706; margin-top: 20px; display: flex; align-items: center; gap: 10px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
-                        유사 의심 문구
-                    </h4>
-                    <ul id="similar-phrases-list">
-                        </ul>
-                </div>
-            </div>
-            <div class="nav-button-container">
-                <button id="btn-show-questions">질문에 답변하기</button>
-            </div>
+            <button id="btn-show-questions">질문에 답변하기</button>
         </div>
 
         <div id="stage-questions" class="card hidden">
@@ -276,7 +168,6 @@
                 <h3>주요 특징</h3>
                 <ul id="fusion-features-list"></ul>
             </div>
-            
             <div class="action-buttons-container">
                 <button id="btn-copy-result">결과 텍스트로 복사</button>
                 <div class="feedback-section">
@@ -288,7 +179,6 @@
                     <p id="feedback-message" style="color: var(--secondary-color); font-weight: bold; margin-top: 10px;"></p>
                 </div>
             </div>
-
             <button id="btn-restart">새로운 아이디어 분석하기</button>
         </div>
         
@@ -296,285 +186,227 @@
     </div>
 
 <script>
-// --- State Management ---
-let originalIdea = '';
-let aiQuestions = [];
-let userAnswers = [];
-let fusionResultForCopy = '';
-
-// --- DOM Elements ---
-const stages = {
-    input: document.getElementById('stage-input'),
-    analysis: document.getElementById('stage-analysis'),
-    questions: document.getElementById('stage-questions'),
-    fusion: document.getElementById('stage-fusion'),
-};
-const steps = {
-    1: document.getElementById('step-1'),
-    2: document.getElementById('step-2'),
-    3: document.getElementById('step-3'),
-};
-const spinner = document.getElementById('loading-spinner');
-const ideaInput = document.getElementById('idea-input');
-const btnStartAnalysis = document.getElementById('btn-start-analysis');
-const btnShowQuestions = document.getElementById('btn-show-questions');
-const btnSubmitAnswers = document.getElementById('btn-submit-answers');
-const btnRestart = document.getElementById('btn-restart');
-const btnCopyResult = document.getElementById('btn-copy-result');
-const btnFeedbackYes = document.getElementById('btn-feedback-yes');
-const btnFeedbackNo = document.getElementById('btn-feedback-no');
-const feedbackMessage = document.getElementById('feedback-message');
-
-// --- Event Listeners ---
-btnStartAnalysis.addEventListener('click', handleAnalysisRequest);
-btnShowQuestions.addEventListener('click', () => revealStage('questions'));
-btnSubmitAnswers.addEventListener('click', handleFusionRequest);
-btnRestart.addEventListener('click', () => location.reload());
-btnCopyResult.addEventListener('click', handleCopyResult);
-btnFeedbackYes.addEventListener('click', () => handleFeedback(true));
-btnFeedbackNo.addEventListener('click', () => handleFeedback(false));
-
-// --- UI Control ---
-function updateProgressBar(stageName) {
-    Object.values(steps).forEach(step => step.classList.remove('active'));
-    if (stageName === 'input' || stageName === 'analysis') {
-        steps[1].classList.add('active');
-    } else if (stageName === 'questions') {
-        steps[1].classList.add('active');
-        steps[2].classList.add('active');
-    } else if (stageName === 'fusion') {
-        [steps[1], steps[2], steps[3]].forEach(s => s.classList.add('active'));
-    }
-}
-
-function revealStage(stageName) {
-    const stageElement = stages[stageName];
-    if (stageElement) {
-        stageElement.classList.remove('hidden');
-        stageElement.classList.add('fade-in');
-        stageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    updateProgressBar(stageName);
-}
-
-function finalizeStage(stageName) {
-    const stageElement = stages[stageName];
-    if (stageElement) {
-        stageElement.classList.add('finalized');
-        const interactiveElements = stageElement.querySelectorAll('button, textarea');
-        interactiveElements.forEach(el => el.disabled = true);
-    }
-}
-
-
-// --- API Call Logic ---
-async function callApi(body) {
-    spinner.classList.remove('hidden');
-    spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
-
-    try {
-        // 백엔드 코드가 Vercel의 /api/ 폴더에 배포되었다고 가정
-        const response = await fetch('/api/student', { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({ error: "An unknown server error occurred." }));
-            throw new Error(errData.error || `서버 오류: ${response.statusText}`);
+    document.addEventListener('DOMContentLoaded', () => {
+        const userData = localStorage.getItem('pi-fuze-user');
+        if (!userData) {
+            alert('로그인이 필요합니다.');
+            window.location.href = './index.html'; // Changed to explicit relative path
+            return;
         }
-        return await response.json();
-    } catch (error) {
-        if (error.name === 'AbortError') {
-             alert('오류: AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요. (Timeout)');
-        } else {
-             alert(`오류가 발생했습니다: ${error.message}`);
-        }
-        location.reload();
-    } finally {
-        spinner.classList.add('hidden');
-    }
-}
-
-// --- Step 1: Analysis ---
-async function handleAnalysisRequest() {
-    originalIdea = ideaInput.value.trim();
-    if (!originalIdea) {
-        alert('아이디어를 입력해주세요.');
-        return;
-    }
-    finalizeStage('input');
-    const data = await callApi({ stage: 'analyze', idea: originalIdea });
-    if (data) {
-        renderAnalysisReport(data);
-        renderQuestionInputs(data.questions);
-        revealStage('analysis');
-    }
-}
-
-// --- START: MODIFIED renderAnalysisReport Function ---
-function renderAnalysisReport(data) {
-    const { originalityScore, overallAssessment, judgmentCriteria, comparisonAnalysis, similarityReport } = data;
-    
-    // --- Render Semi-Circle Chart ---
-    const semiCircleFg = document.getElementById('semi-circle-fg');
-    const gaugeText = document.getElementById('gauge-text');
-    const radius = 80;
-    const circumference = Math.PI * radius; // 251.33
-    const offset = circumference - (originalityScore / 100) * circumference;
-    semiCircleFg.style.strokeDashoffset = offset;
-    animateValue(gaugeText, 0, originalityScore, 1200);
-
-    // --- Render Texts ---
-    document.getElementById('overall-assessment').textContent = overallAssessment;
-    
-    // --- Render Criteria ---
-    const criteriaList = document.getElementById('criteria-list');
-    criteriaList.innerHTML = '';
-    judgmentCriteria.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        criteriaList.appendChild(li);
+        const user = JSON.parse(userData);
+        document.getElementById('welcome-message').textContent = `${user.userName}님, 환영합니다!`;
     });
 
-    // --- Render Comparison ---
-    document.getElementById('comparison-name').textContent = comparisonAnalysis.existingExampleName;
-    document.getElementById('comparison-desc').textContent = comparisonAnalysis.existingExampleDesc;
-    document.getElementById('points-similarity').textContent = comparisonAnalysis.pointsOfSimilarity;
-    document.getElementById('points-difference').textContent = comparisonAnalysis.pointsOfDifference;
+    let originalIdea = '', aiQuestions = [], fusionResultForCopy = '';
+    const stages = { input: document.getElementById('stage-input'), analysis: document.getElementById('stage-analysis'), questions: document.getElementById('stage-questions'), fusion: document.getElementById('stage-fusion') };
+    const steps = { 1: document.getElementById('step-1'), 2: document.getElementById('step-2'), 3: document.getElementById('step-3') };
+    const spinner = document.getElementById('loading-spinner');
+    
+    document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
+    document.getElementById('btn-show-questions').addEventListener('click', () => revealStage('questions'));
+    document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
+    document.getElementById('btn-restart').addEventListener('click', () => location.reload());
+    document.getElementById('btn-copy-result').addEventListener('click', handleCopyResult);
+    document.getElementById('btn-feedback-yes').addEventListener('click', () => handleFeedback(true));
+    document.getElementById('btn-feedback-no').addEventListener('click', () => handleFeedback(false));
 
-    // --- START: NEW: Render Similarity Report ---
-    const reportSection = document.getElementById('similarity-report-section');
-    const summaryElement = document.getElementById('similarity-summary');
-    const listElement = document.getElementById('similar-phrases-list');
+    function updateProgressBar(stageName) {
+        Object.values(steps).forEach(step => step.classList.remove('active'));
+        if (stageName === 'analysis') steps[1].classList.add('active');
+        if (stageName === 'questions') [steps[1], steps[2]].forEach(s => s.classList.add('active'));
+        if (stageName === 'fusion') [steps[1], steps[2], steps[3]].forEach(s => s.classList.add('active'));
+    }
 
-    if (similarityReport) {
-        summaryElement.textContent = similarityReport.reportSummary || "유사성 분석 중 오류가 발생했습니다.";
-        
-        listElement.innerHTML = ''; // Clear list
-        if (similarityReport.highlySimilarPhrases && similarityReport.highlySimilarPhrases.length > 0) {
-            similarityReport.highlySimilarPhrases.forEach(phrase => {
-                const li = document.createElement('li');
-                li.textContent = `"${phrase}"`;
-                listElement.appendChild(li);
+    function revealStage(stageName) {
+        const stageElement = stages[stageName];
+        if (stageElement) {
+            stageElement.classList.remove('hidden');
+            stageElement.classList.add('fade-in');
+            stageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        updateProgressBar(stageName);
+    }
+
+    function finalizeStage(stageName) {
+        const stageElement = stages[stageName];
+        if (stageElement) {
+            stageElement.classList.add('finalized');
+            stageElement.querySelectorAll('button, textarea').forEach(el => el.disabled = true);
+        }
+    }
+
+    async function callApi(body) {
+        spinner.classList.remove('hidden');
+        spinner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        try {
+            const response = await fetch('/api/student', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: controller.signal
             });
-        } else {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `Server Error: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') alert('오류: AI 응답 시간이 너무 오래 걸립니다.');
+            else alert(`오류: ${error.message}`);
+            location.reload();
+        } finally {
+            spinner.classList.add('hidden');
+        }
+    }
+
+    async function handleAnalysisRequest() {
+        originalIdea = document.getElementById('idea-input').value.trim();
+        if (!originalIdea) return alert('아이디어를 입력해주세요.');
+        finalizeStage('input');
+        const data = await callApi({ stage: 'analyze', idea: originalIdea });
+        if (data) {
+            renderAnalysisReport(data);
+            renderQuestionInputs(data.questions);
+            revealStage('analysis');
+        }
+    }
+
+    async function handleFusionRequest() {
+        const userAnswers = aiQuestions.map((_, i) => document.getElementById(`answer-${i}`).value.trim());
+        if (userAnswers.some(a => a === '')) return alert('모든 질문에 답변해주세요.');
+        finalizeStage('analysis');
+        finalizeStage('questions');
+        const data = await callApi({ stage: 'fuse', originalIdea, answers: userAnswers });
+        if (data) {
+            renderFusionReport(data);
+            revealStage('fusion');
+        }
+    }
+
+    function renderAnalysisReport(data) {
+        const { originalityScore, overallAssessment, judgmentCriteria, plagiarismReport } = data;
+        
+        // Gauge
+        const gaugeArc = document.getElementById('gauge-arc');
+        const circumference = 251.3;
+        const offset = circumference - (originalityScore / 100) * circumference;
+        gaugeArc.style.strokeDashoffset = offset;
+        animateValue(document.getElementById('gauge-text'), 0, originalityScore, 1200);
+
+        // Texts
+        document.getElementById('overall-assessment').textContent = overallAssessment;
+        
+        const criteriaList = document.getElementById('criteria-list');
+        criteriaList.innerHTML = '';
+        judgmentCriteria.forEach(item => {
             const li = document.createElement('li');
-            li.textContent = "특별히 겹치는 문구가 발견되지 않았습니다.";
-            listElement.appendChild(li);
+            li.textContent = item;
+            criteriaList.appendChild(li);
+        });
+
+        // Plagiarism Report
+        const reportContainer = document.getElementById('plagiarism-report-container');
+        reportContainer.innerHTML = ''; // Clear previous report
+
+        // Direct Plagiarism Section
+        if (plagiarismReport.directPlagiarism && plagiarismReport.directPlagiarism.length > 0) {
+            const directSection = document.createElement('div');
+            directSection.innerHTML = `<h4>텍스트 직접 표절 분석</h4>`;
+            plagiarismReport.directPlagiarism.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'report-item';
+                itemDiv.innerHTML = `
+                    <p><strong>유사 의심 문장:</strong> "${item.similarSentence}"</p>
+                    <p><strong>출처:</strong> ${item.source}</p>
+                    <p><strong>텍스트 유사도:</strong> ${item.similarityScore}%</p>
+                    <div class="similarity-bar-container">
+                        <div class="similarity-bar" style="width: ${item.similarityScore}%;"></div>
+                    </div>
+                `;
+                directSection.appendChild(itemDiv);
+            });
+            reportContainer.appendChild(directSection);
         }
-        reportSection.classList.remove('hidden'); // Show the whole section
-    }
-    // --- END: NEW: Render Similarity Report ---
-}
-// --- END: MODIFIED renderAnalysisReport Function ---
 
-
-// --- Step 2: Questions ---
-function renderQuestionInputs(questions) {
-    aiQuestions = questions;
-    const container = document.getElementById('questions-container');
-    container.innerHTML = '';
-    if (!questions || questions.length === 0) {
-        console.error("AI가 질문을 반환하지 않았습니다.");
-        container.innerHTML = "<p>오류: AI로부터 질문을 받는 데 실패했습니다.</p>";
-        return;
+        // Structural Plagiarism Section
+        if (plagiarismReport.structuralPlagiarism && plagiarismReport.structuralPlagiarism.length > 0) {
+            const structuralSection = document.createElement('div');
+            structuralSection.innerHTML = `<h4 style="margin-top: 30px;">구조적 표절 분석</h4>`;
+            plagiarismReport.structuralPlagiarism.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'report-item';
+                itemDiv.innerHTML = `
+                    <p><strong>유사 논리 구조:</strong> ${item.sourceLogic}</p>
+                    <p><strong>유사 지점:</strong> ${item.pointOfSimilarity}</p>
+                `;
+                structuralSection.appendChild(itemDiv);
+            });
+            reportContainer.appendChild(structuralSection);
+        }
+        
+        if (reportContainer.innerHTML === '') {
+            reportContainer.innerHTML = '<p>표절 의심 항목이 발견되지 않았습니다.</p>';
+        }
     }
-    questions.forEach((q, index) => {
-        const card = document.createElement('div');
-        card.className = 'question-card';
-        card.innerHTML = `<label for="answer-${index}">질문 ${index + 1}: ${q}</label><textarea id="answer-${index}" placeholder="답변을 입력하세요..."></textarea>`;
-        container.appendChild(card);
-    });
-}
 
-// --- Step 3: Fusion ---
-async function handleFusionRequest() {
-    userAnswers = aiQuestions.map((_, index) => document.getElementById(`answer-${index}`).value.trim());
-    if (userAnswers.some(answer => answer === '')) {
-        alert('모든 질문에 답변해주세요.');
-        return;
+    function renderQuestionInputs(questions) {
+        aiQuestions = questions;
+        const container = document.getElementById('questions-container');
+        container.innerHTML = '';
+        if (!questions || questions.length === 0) return;
+        questions.forEach((q, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            card.innerHTML = `<label for="answer-${index}">질문 ${index + 1}: ${q}</label><textarea id="answer-${index}" placeholder="답변을 입력하세요..."></textarea>`;
+            container.appendChild(card);
+        });
     }
-    finalizeStage('analysis');
-    finalizeStage('questions');
-    const data = await callApi({ stage: 'fuse', originalIdea: originalIdea, answers: userAnswers });
-    if (data) {
-        renderFusionReport(data);
-        revealStage('fusion');
-    }
-}
 
-function renderFusionReport(data) {
-    const { fusionTitle, fusionSummary, connection, keyFeatures } = data;
-    document.getElementById('fusion-title').textContent = fusionTitle;
-    document.getElementById('fusion-summary-text').textContent = fusionSummary;
-    document.getElementById('fusion-connection').textContent = connection;
+    function renderFusionReport(data) {
+        const { fusionTitle, fusionSummary, connection, keyFeatures } = data;
+        document.getElementById('fusion-title').textContent = fusionTitle;
+        document.getElementById('fusion-summary-text').textContent = fusionSummary;
+        document.getElementById('fusion-connection').textContent = connection;
+        
+        const list = document.getElementById('fusion-features-list');
+        list.innerHTML = '';
+        keyFeatures.forEach(feature => {
+            const li = document.createElement('li');
+            li.textContent = feature;
+            list.appendChild(li);
+        });
+
+        fusionResultForCopy = `## 융합 아이디어: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${keyFeatures.map(f => `- ${f}`).join('\n')}`;
+    }
+
+    function handleCopyResult() {
+        navigator.clipboard.writeText(fusionResultForCopy).then(() => {
+            const btn = document.getElementById('btn-copy-result');
+            btn.textContent = '복사 완료!';
+            setTimeout(() => { btn.textContent = '결과 텍스트로 복사'; }, 2000);
+        });
+    }
+
+    function handleFeedback(isHelpful) {
+        document.getElementById('feedback-message').textContent = '피드백을 주셔서 감사합니다!';
+        document.getElementById('btn-feedback-yes').disabled = true;
+        document.getElementById('btn-feedback-no').disabled = true;
+    }
     
-    const list = document.getElementById('fusion-features-list');
-    list.innerHTML = '';
-    keyFeatures.forEach(feature => {
-        const li = document.createElement('li');
-        li.textContent = feature;
-        list.appendChild(li);
-    });
-
-    // Prepare text for copying
-    fusionResultForCopy = `## 융합 아이디어: ${fusionTitle}\n\n**요약:**\n${fusionSummary}\n\n**연결고리 분석:**\n${connection}\n\n**주요 특징:**\n${keyFeatures.map(f => `- ${f}`).join('\n')}`;
-}
-
-// --- Utility Functions ---
-function animateValue(obj, start, end, duration) {
-    let startTimestamp = null;
-    const step = (timestamp) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        const currentValue = Math.floor(progress * (end - start) + start);
-        obj.textContent = currentValue + "%";
-        if (progress < 1) {
-            window.requestAnimationFrame(step);
-        }
-    };
-    window.requestAnimationFrame(step);
-}
-
-function handleCopyResult() {
-    navigator.clipboard.writeText(fusionResultForCopy).then(() => {
-        const originalText = btnCopyResult.textContent;
-        btnCopyResult.textContent = '복사 완료!';
-        btnCopyResult.disabled = true;
-        setTimeout(() => {
-            btnCopyResult.textContent = originalText;
-            btnCopyResult.disabled = false;
-        }, 2000);
-    }).catch(err => {
-        console.error('Copy failed', err);
-        alert('복사에 실패했습니다.');
-    });
-}
-
-function handleFeedback(isHelpful) {
-    feedbackMessage.textContent = '피드백을 주셔서 감사합니다!';
-    btnFeedbackYes.disabled = true;
-    btnFeedbackNo.disabled = true;
-    btnFeedbackYes.classList.remove('selected');
-    btnFeedbackNo.classList.remove('selected');
-    if (isHelpful) {
-        btnFeedbackYes.classList.add('selected');
-    } else {
-        btnFeedbackNo.classList.add('selected');
+    function animateValue(obj, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.textContent = Math.floor(progress * (end - start) + start) + "%";
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
     }
-}
-
-// --- Initial Load ---
-updateProgressBar('input');
-
 </script>
 </body>
 </html>
+
