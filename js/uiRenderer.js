@@ -30,7 +30,7 @@ function renderEvaluationHtml(data) {
     `;
 }
 
-// --- (수정) 유사성 렌더링 함수 (학생용 디자인 적용) ---
+// --- (수정) 유사성 렌더링 함수 (학생용 디자인 + 제목 추가) ---
 function renderSimilarityHtml(data) {
     const structuralSimilarities = data.structuralSimilarities || [];
     const textualSimilarities = data.textualSimilarities || [];
@@ -48,6 +48,7 @@ function renderSimilarityHtml(data) {
                 urlHTML = `<br><strong>추정 URL:</strong> ${escapeHTML(item.sourceURL)}`;
             }
 
+            // 학생용 CSS 클래스(.report-item.structural) 사용
             return `
                 <div class="report-item structural">
                     <h4>${escapeHTML(item.area)}</h4>
@@ -71,6 +72,7 @@ function renderSimilarityHtml(data) {
                  urlHTML = `<br><strong>추정 URL:</strong> ${escapeHTML(item.sourceURL)}`;
              }
 
+             // 학생용 CSS 클래스(.report-item.textual) 사용
              return `
                 <div class="report-item textual">
                     <h4>"${escapeHTML(item.phrase)}"</h4>
@@ -84,21 +86,20 @@ function renderSimilarityHtml(data) {
         }).join('');
     }
 
-    // --- 두 섹션을 조합하여 최종 HTML 반환 ---
-    let finalHtml = '';
-    if (structuralHtml || textualHtml) { // 둘 중 하나라도 내용이 있으면
-         finalHtml = structuralHtml + textualHtml; // 순서대로 합침
+    // --- 두 섹션을 조합하고 제목 추가 ---
+    let reportItemsHtml = '';
+    if (structuralHtml || textualHtml) {
+         reportItemsHtml = structuralHtml + textualHtml; // 순서대로 합침
     } else {
         // 둘 다 없으면 메시지 표시
-        finalHtml = '<p class="no-similarity-found">구조적 또는 텍스트 유사성이 감지되지 않았습니다.</p>';
+        reportItemsHtml = '<p class="no-similarity-found">구조적 또는 텍스트 유사성이 감지되지 않았습니다.</p>';
     }
 
+    // 최종 HTML 구조 반환 (h3 제목 추가, report-output 제거)
     return `
-        <div class="report-output">
-            <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3>
-            <div id="similarity-report-items">
-                ${finalHtml}
-            </div>
+        <h3>표절 검사 상세 리포트</h3>
+        <div id="similarity-report-items">
+            ${reportItemsHtml}
         </div>
     `;
 }
@@ -113,4 +114,16 @@ function renderErrorHtml(sectionTitle, errorMessage) {
             </p>
         </div>
     `;
+}
+
+/**
+ * XSS 방지를 위한 간단한 HTML 이스케이프 함수 (변경 없음)
+ */
+function escapeHTML(str) {
+    if (!str && str !== 0) return '';
+    return String(str).replace(/[&<>"']/g, function(match) {
+        return {
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[match];
+    });
 }
