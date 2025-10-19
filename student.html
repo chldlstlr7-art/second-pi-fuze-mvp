@@ -241,9 +241,79 @@
             <button id="btn-start-analysis">분석 시작</button>
         </div>
         
-        <div id="stage-analysis" class="card hidden"></div>
-        <div id="stage-questions" class="card hidden"></div>
-        <div id="stage-fusion" class="card hidden"></div>
+        <div id="stage-analysis" class="card hidden">
+            <h2>1. 독창성 진단 리포트 <span id="analysis-doc-type" style="font-size: 0.6em; color: var(--text-light); font-weight: 500;"></span></h2>
+            
+            <div class="analysis-section">
+                <h3>핵심 주장/내용 요약</h3>
+                <ol id="core-summary-list"></ol>
+            </div>
+    
+            <div class="analysis-section">
+                <h3>종합 평가 지표</h3>
+                <div class="gauges-grid">
+                    <div class="gauge-container">
+                        <h4>논리 구조적 독창성</h4>
+                        <svg width="200" height="120" viewBox="0 0 200 120">
+                            <defs><linearGradient id="logicalGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#D0021B"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#50E3C2"/></linearGradient></defs>
+                            <path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" />
+                            <path id="logical-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#logicalGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3;"/>
+                            <text id="logical-gauge-text" x="100" y="95" text-anchor="middle" font-size="28px" font-weight="bold">0%</text>
+                        </svg>
+                    </div>
+                    <div class="gauge-container">
+                        <h4>텍스트 표절률</h4>
+                        <svg width="200" height="120" viewBox="0 0 200 120">
+                            <defs><linearGradient id="textGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#50E3C2"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#D0021B"/></linearGradient></defs>
+                            <path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" />
+                            <path id="text-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#textGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3;"/>
+                            <text id="text-gauge-text" x="100" y="95" text-anchor="middle" font-size="28px" font-weight="bold">0%</text>
+                        </svg>
+                    </div>
+                </div>
+                <div class="originality-reasoning">
+                    <h4>분석 코멘트</h4>
+                    <p id="originality-reasoning-text"></p>
+                </div>
+            </div>
+            
+            <div class="analysis-section">
+                <h3>논리 흐름도 분석</h3>
+                <div class="flowchart" id="logic-flowchart"></div>
+            </div>
+    
+            <div class="analysis-section">
+                <h3>표절 검사 상세 리포트</h3>
+                <div id="plagiarism-report-container"></div>
+            </div>
+            <button id="btn-show-questions">질문에 답변하기</button>
+        </div>
+
+        <div id="stage-questions" class="card hidden">
+            <h2>2. 창의적 도발 질문</h2>
+            <p>AI가 제안한 아래 질문들에 답변하며 글을 발전시켜 보세요.</p>
+            <div id="questions-container"></div>
+            <button id="btn-submit-answers">답변 제출 및 최종 제안 생성</button>
+        </div>
+
+        <div id="stage-fusion" class="card hidden">
+            <h2>3. 최종 제안</h2>
+            <div id="fusion-content-wrapper">
+                <!-- Fusion content will be injected here -->
+            </div>
+            <div class="action-buttons-container">
+                <button id="btn-copy-result">결과 텍스트로 복사</button>
+                <div class="feedback-section">
+                    <p>이 제안이 도움이 되었나요?</p>
+                    <div class="feedback-buttons">
+                        <button class="feedback-btn" id="btn-feedback-yes">👍</button>
+                        <button class="feedback-btn" id="btn-feedback-no">👎</button>
+                    </div>
+                    <p id="feedback-message" style="color: var(--secondary-color); font-weight: bold; margin-top: 10px;"></p>
+                </div>
+            </div>
+            <button id="btn-restart">새로운 아이디어 분석하기</button>
+        </div>
         
         <div id="loading-container" class="hidden">
             <div class="spinner"></div>
