@@ -57,9 +57,9 @@ async function handleAssessmentRequest() {
             <div id="${fileId}" class="card">
                 <h2><span id="status-${fileId}" class="status-icon">⏳</span> ${escapeHTML(file.name)}</h2>
 
-                <div class="accordion-item open"> {/* 평가는 기본 열림 */}
+                <div class="accordion-item open"> 
                     <div class="accordion-header" onclick="toggleAccordion(this)">
-                        <h3 class="accordion-title eval-title"><span class="section-icon">📊</span> 종합 점수 및 평가</h3>
+                        <h3 class="accordion-title eval-title"><span class="section-icon"></span> 종합 점수 및 평가</h3>
                         <span class="accordion-toggle">▲</span>
                     </div>
                     <div class="accordion-content" id="${evalId}">
@@ -77,7 +77,7 @@ async function handleAssessmentRequest() {
 
                 <div class="accordion-item">
                      <div class="accordion-header" onclick="toggleAccordion(this)">
-                        <h3 class="accordion-title summary-title"><span class="section-icon">📝</span> 핵심 요약</h3>
+                        <h3 class="accordion-title summary-title"><span class="section-icon"></span> 핵심 요약</h3>
                         <span class="accordion-toggle">▼</span>
                     </div>
                     <div class="accordion-content" id="${summaryId}">
@@ -91,7 +91,7 @@ async function handleAssessmentRequest() {
 
                 <div class="accordion-item">
                      <div class="accordion-header" onclick="toggleAccordion(this)">
-                        <h3 class="accordion-title similarity-title" style="color: var(--warning-dark);"><span class="section-icon">⚠️</span> 표절 검사 상세 리포트</h3>
+                        <h3 class="accordion-title similarity-title" style="color: var(--warning-dark);"><span class="section-icon"></span> 표절 검사 상세 리포트</h3>
                         <span class="accordion-toggle">▼</span>
                     </div>
                     <div class="accordion-content" id="${simId}">
