@@ -236,7 +236,7 @@ async function handleFusionRequest() {
 
 // --- Rendering Functions ---
 function renderAnalysisReport(data) {
-    const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport } = data;
+    const { documentType, coreSummary, logicFlowchart, logicalOriginalityScore, textPlagiarismScore, plagiarismReport } = data;
     
     document.getElementById('analysis-doc-type').textContent = `(분석 유형: ${documentType})`;
     
@@ -244,39 +244,53 @@ function renderAnalysisReport(data) {
     coreSummaryList.innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
     
     const flowchartContainer = document.getElementById('logic-flowchart');
-    flowchartContainer.innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
-
-    const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport.plagiarismSuspicion);
-    const logicalOriginalityScore = 100 - (structuralComparison ? ((structuralComparison.topicalSimilarity * 0.4) + (structuralComparison.structuralSimilarity * 0.6)) : 0);
-    
-    const reasoningEl = document.getElementById('originality-reasoning-text');
-    if (reasoningEl) {
-        reasoningEl.textContent = (structuralComparison && structuralComparison.originalityReasoning) || "분석 코멘트가 없습니다.";
+    if(flowchartContainer){
+        flowchartContainer.innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
     }
 
     animateGauge('logical-gauge-arc', 'logical-gauge-text', logicalOriginalityScore);
     animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true);
 
+    const reasoningEl = document.getElementById('originality-reasoning-text');
+    if (reasoningEl && plagiarismReport.structuralPlagiarism && plagiarismReport.structuralPlagiarism.length > 0) {
+        reasoningEl.textContent = plagiarismReport.structuralPlagiarism[0].originalityReasoning || "분석 코멘트가 없습니다.";
+    } else if (reasoningEl) {
+        reasoningEl.textContent = "구조적 유사성 분석 코멘트가 없습니다.";
+    }
+
     const reportContainer = document.getElementById('plagiarism-report-container');
     reportContainer.innerHTML = '';
     let hasContent = false;
 
-    if (structuralComparison && structuralComparison.sourceName) {
+    if (plagiarismReport.structuralPlagiarism && plagiarismReport.structuralPlagiarism.length > 0) {
         hasContent = true;
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'report-item structural';
-        itemDiv.innerHTML = `<h4>구조적 유사성</h4><p><strong>유사사례:</strong> ${structuralComparison.sourceName}</p><p><strong>유사 논리 구조:</strong> ${structuralComparison.sourceLogic}</p><p><strong>구조 일치율:</strong> ${structuralComparison.structuralSimilarity}%</p><div class="similarity-bar-container"><div class="similarity-bar" style="width: ${structuralComparison.structuralSimilarity}%;"></div></div>`;
-        reportContainer.appendChild(itemDiv);
+        const structuralSection = document.createElement('div');
+        structuralSection.innerHTML = `<h4>구조적 유사성</h4>`;
+        plagiarismReport.structuralPlagiarism.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'report-item structural';
+            itemDiv.innerHTML = `
+                <p><strong>유사사례:</strong> ${item.sourceName}</p>
+                <p><strong>유사 논리 구조:</strong> ${item.sourceLogic}</p>
+                <p><strong>구조 일치율:</strong> ${item.structuralSimilarity}%</p>
+                <div class="similarity-bar-container"><div class="similarity-bar" style="width: ${item.structuralSimilarity}%;"></div></div>
+            `;
+            structuralSection.appendChild(itemDiv);
+        });
+        reportContainer.appendChild(structuralSection);
     }
 
-    if (plagiarismReport && plagiarismReport.plagiarismSuspicion && plagiarismReport.plagiarismSuspicion.length > 0) {
+    if (plagiarismReport.plagiarismSuspicion && plagiarismReport.plagiarismSuspicion.length > 0) {
         hasContent = true;
+        const textualSection = document.createElement('div');
+        textualSection.innerHTML = `<h4 style="margin-top:30px;">텍스트 유사성</h4>`;
         plagiarismReport.plagiarismSuspicion.sort((a, b) => b.similarityScore - a.similarityScore).forEach(item => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'report-item textual';
-            itemDiv.innerHTML = `<h4>텍스트 유사성 (${item.similarityScore}%)</h4><p><strong>내 문장 (유사 의심):</strong> "${item.userSentence}"</p><p><strong>원본 의심 문장 (출처: ${item.source}):</strong> "${item.originalSentence}"</p>`;
-            reportContainer.appendChild(itemDiv);
+            itemDiv.innerHTML = `<p><strong>내 문장 (유사 의심):</strong> "${item.userSentence}"</p><p><strong>원본 의심 문장 (출처: ${item.source}):</strong> "${item.originalSentence}"</p>`;
+            textualSection.appendChild(itemDiv);
         });
+        reportContainer.appendChild(textualSection);
     }
 
     if (!hasContent) {
