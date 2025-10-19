@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fileInput: document.getElementById('file-upload'),
         fileNameDisplay: document.getElementById('file-name'),
         ideaTextarea: document.getElementById('idea-input'),
-        spinner: document.getElementById('loading-container') // Changed to container
+        spinner: document.getElementById('loading-container')
     };
     setupFileHandling(fileHandlingElements);
 });
@@ -48,6 +48,12 @@ const loadingText = document.getElementById('loading-text');
 function initializeEventListeners() {
     document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
     document.getElementById('btn-retry').addEventListener('click', () => location.reload());
+    document.getElementById('btn-show-questions').addEventListener('click', () => revealStage('questions'));
+    document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
+    document.getElementById('btn-restart').addEventListener('click', () => location.reload());
+    document.getElementById('btn-copy-result').addEventListener('click', handleCopyResult);
+    document.getElementById('btn-feedback-yes').addEventListener('click', () => handleFeedback(true));
+    document.getElementById('btn-feedback-no').addEventListener('click', () => handleFeedback(false));
 }
 
 // --- File Handling ---
@@ -161,7 +167,6 @@ async function callApi(body) {
     loadingContainer.classList.remove('hidden');
     loadingContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // Loading text animation
     const messages = ["AI가 문서를 분류 중입니다...", "논리 구조를 분석하고 있습니다...", "표절 검사를 수행 중입니다...", "리포트를 생성 중입니다..."];
     let messageIndex = 0;
     loadingText.textContent = messages[messageIndex];
@@ -171,7 +176,7 @@ async function callApi(body) {
     }, 3000);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 50000); // Timeout increased to 50 seconds
+    const timeoutId = setTimeout(() => controller.abort(), 50000); 
     try {
         const response = await fetch('/api/student', { 
             method: 'POST',
@@ -233,15 +238,13 @@ async function handleFusionRequest() {
 function renderAnalysisReport(data) {
     const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport } = data;
     
-    const analysisStage = stages.analysis;
-    // Set content and add event listeners
-    analysisStage.innerHTML = `
-        <h2>1. 독창성 진단 리포트 <span id="analysis-doc-type">(분석 유형: ${documentType})</span></h2>
-        <!-- ... rest of the static HTML structure from student.html for stage-analysis ... -->
-    `;
-    // Find newly created elements and populate them
-    document.getElementById('core-summary-list').innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
-    document.getElementById('logic-flowchart').innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
+    document.getElementById('analysis-doc-type').textContent = `(분석 유형: ${documentType})`;
+    
+    const coreSummaryList = document.getElementById('core-summary-list');
+    coreSummaryList.innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
+    
+    const flowchartContainer = document.getElementById('logic-flowchart');
+    flowchartContainer.innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
 
     const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport.plagiarismSuspicion);
     const logicalOriginalityScore = 100 - (structuralComparison ? ((structuralComparison.topicalSimilarity * 0.4) + (structuralComparison.structuralSimilarity * 0.6)) : 0);
@@ -279,6 +282,8 @@ function renderAnalysisReport(data) {
     if (!hasContent) {
         reportContainer.innerHTML = '<p>표절 의심 항목이 발견되지 않았습니다.</p>';
     }
+
+    document.getElementById('btn-show-questions').disabled = false;
 }
 
 function calculateTextPlagiarismScore(plagiarismSuspicion) {
@@ -303,7 +308,21 @@ function renderFusionReport(data) {
     const fusionContentWrapper = document.getElementById('fusion-content-wrapper');
 
     const diffHTML = (suggestedEdits && suggestedEdits.length > 0) 
-        ? suggestedEdits.map((edit, index) => `...`).join('')
+        ? suggestedEdits.map((edit, index) => `
+            <div class="diff-item">
+                <div class="diff-header">수정 제안 #${index + 1}</div>
+                <div class="diff-content">
+                    <div class="diff-box before">
+                        <h4>Before (원본)</h4>
+                        <p>${edit.originalText}</p>
+                    </div>
+                    <div class="diff-box after">
+                        <h4>After (AI 제안)</h4>
+                        <p>${edit.suggestedRevision}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('')
         : '<p>구체적인 수정 제안이 없습니다.</p>';
 
     fusionContentWrapper.innerHTML = `
@@ -320,22 +339,48 @@ function renderFusionReport(data) {
             <div class="diff-container">${diffHTML}</div>
         </div>`;
     
-    fusionResultForCopy = `...`;
+    let editsForCopy = (suggestedEdits && suggestedEdits.length > 0)
+        ? suggestedEdits.map((edit, i) => `\n[수정 제안 #${i+1}]\n- 원본: ${edit.originalText}\n- 제안: ${edit.suggestedRevision}`).join('\n')
+        : '';
+    fusionResultForCopy = `## 최종 제안: ${fusionTitle}\n\n**핵심 분석**\n- 기존 내용: ${analysis.originalSummary}\n- 변경점: ${analysis.keyChange}\n- 결론: ${analysis.conclusion}\n${editsForCopy}`;
 }
 
 function handleCopyResult() {
-    // ... (implementation is correct)
+    navigator.clipboard.writeText(fusionResultForCopy).then(() => {
+        const btn = document.getElementById('btn-copy-result');
+        btn.textContent = '복사 완료!';
+        setTimeout(() => { btn.textContent = '결과 텍스트로 복사'; }, 2000);
+    });
 }
 
 function handleFeedback(isHelpful) {
-    // ... (implementation is correct)
+    document.getElementById('feedback-message').textContent = '피드백을 주셔서 감사합니다!';
+    document.getElementById('btn-feedback-yes').disabled = true;
+    document.getElementById('btn-feedback-no').disabled = true;
 }
 
 function animateValue(obj, start, end, duration) {
-    // ... (implementation is correct)
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        obj.textContent = Math.floor(progress * (end - start) + start) + "%";
+        if (progress < 1) window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
 }
 
 function animateGauge(arcId, textId, score, isReversed = false) {
-    // ... (implementation is correct)
+    const gaugeArc = document.getElementById(arcId);
+    const gaugeText = document.getElementById(textId);
+    if (!gaugeArc || !gaugeText) return;
+    
+    const circumference = 251.3;
+    const offset = isReversed 
+        ? 251.3 - (score / 100) * circumference
+        : circumference - (score / 100) * circumference;
+    
+    gaugeArc.style.strokeDashoffset = offset;
+    animateValue(gaugeText, 0, score, 1200);
 }
 
