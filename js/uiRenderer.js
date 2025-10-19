@@ -30,15 +30,16 @@ function renderEvaluationHtml(data) {
     `;
 }
 
-// --- (수정) 유사성 렌더링 함수 (학생용 디자인 + 제목 추가) ---
+// --- (수정) 유사성 렌더링 함수 (소제목 복원) ---
 function renderSimilarityHtml(data) {
+    // AI 응답이 예상과 다를 경우를 대비하여 기본값 설정
     const structuralSimilarities = data.structuralSimilarities || [];
     const textualSimilarities = data.textualSimilarities || [];
 
     let structuralHtml = '';
     let textualHtml = '';
 
-    // 1. 구조적 유사성 (Amber)
+    // 1. 구조적 유사성 (Amber) 항목 생성
     if (structuralSimilarities.length > 0) {
         structuralHtml = structuralSimilarities.map(item => {
             let urlHTML = '';
@@ -60,9 +61,12 @@ function renderSimilarityHtml(data) {
                 </div>
             `;
         }).join('');
+    } else {
+        // (수정) 리스트 아이템 대신 메시지 표시
+        structuralHtml = '<p class="no-similarity-found">해당 없음</p>';
     }
 
-    // 2. 텍스트 유사성 (Red)
+    // 2. 텍스트 유사성 (Red) 항목 생성
     if (textualSimilarities.length > 0) {
         textualHtml = textualSimilarities.map(item => {
              let urlHTML = '';
@@ -84,22 +88,26 @@ function renderSimilarityHtml(data) {
                 </div>
             `;
         }).join('');
-    }
-
-    // --- 두 섹션을 조합하고 제목 추가 ---
-    let reportItemsHtml = '';
-    if (structuralHtml || textualHtml) {
-         reportItemsHtml = structuralHtml + textualHtml; // 순서대로 합침
     } else {
-        // 둘 다 없으면 메시지 표시
-        reportItemsHtml = '<p class="no-similarity-found">구조적 또는 텍스트 유사성이 감지되지 않았습니다.</p>';
+         // (수정) 리스트 아이템 대신 메시지 표시
+        textualHtml = '<p class="no-similarity-found">해당 없음</p>';
     }
 
-    // 최종 HTML 구조 반환 (h3 제목 추가, report-output 제거)
+    // --- 제목과 두 섹션을 조합하여 최종 HTML 반환 ---
     return `
         <h3>표절 검사 상세 리포트</h3>
         <div id="similarity-report-items">
-            ${reportItemsHtml}
+            
+            <h4 class="similarity-subtitle" style="color: var(--warning-color);">
+                1. 구조적 유사성 (아이디어/논리 구조)
+            </h4>
+            ${structuralHtml} 
+
+            <h4 class="similarity-subtitle" style="color: var(--danger-color); margin-top: 30px;">
+                2. 텍스트 유사성 (문장/구절 복사)
+            </h4>
+            ${textualHtml}
+            
         </div>
     `;
 }
