@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Check for user login status from localStorage
     const userData = localStorage.getItem('pi-fuze-user');
     if (!userData) {
         handleError("로그인이 필요합니다.", false);
@@ -9,10 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = JSON.parse(userData);
     document.getElementById('welcome-message').textContent = `${user.userName}님, 환영합니다!`;
     
-    // 2. Setup all event listeners for the page
     initializeEventListeners();
 
-    // 3. Setup file handling (drag & drop, click to upload)
     const fileHandlingElements = {
         dropArea: document.getElementById('file-drop-area'),
         fileInput: document.getElementById('file-upload'),
@@ -23,12 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setupFileHandling(fileHandlingElements);
 });
 
-// --- State Management Variables ---
+// --- State Management ---
 let originalIdea = '';
 let aiQuestions = [];
 let fusionResultForCopy = '';
 
-// --- DOM Element References ---
+// --- DOM Elements ---
 const stages = { 
     input: document.getElementById('stage-input'), 
     analysis: document.getElementById('stage-analysis'), 
@@ -42,12 +39,10 @@ const steps = {
 };
 const spinner = document.getElementById('loading-spinner');
 
-// --- Event Listener Setup (FIXED) ---
+// --- Event Listener Setup ---
 function initializeEventListeners() {
     document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
     document.getElementById('btn-retry').addEventListener('click', () => location.reload());
-    
-    // Listeners for buttons in hidden stages
     document.getElementById('btn-show-questions').addEventListener('click', () => revealStage('questions'));
     document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
     document.getElementById('btn-restart').addEventListener('click', () => location.reload());
@@ -237,7 +232,12 @@ function renderAnalysisReport(data) {
 
     const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport.plagiarismSuspicion);
     const logicalOriginalityScore = 100 - (structuralComparison ? ((structuralComparison.topicalSimilarity * 0.4) + (structuralComparison.structuralSimilarity * 0.6)) : 0);
-    document.getElementById('originality-reasoning-text').textContent = structuralComparison.originalityReasoning || "분석 코멘트가 없습니다.";
+    
+    // SAFEGUARD: Check if the element exists before setting its content
+    const reasoningEl = document.getElementById('originality-reasoning-text');
+    if (reasoningEl) {
+        reasoningEl.textContent = (structuralComparison && structuralComparison.originalityReasoning) || "분석 코멘트가 없습니다.";
+    }
 
     animateGauge('logical-gauge-arc', 'logical-gauge-text', logicalOriginalityScore);
     animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true);
