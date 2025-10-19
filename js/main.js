@@ -31,7 +31,7 @@ dropZone.addEventListener('drop', async (e) => {
 btnStart.addEventListener('click', handleAssessmentRequest);
 btnRestart.addEventListener('click', () => location.reload());
 
-// --- (수정) 다중 파일 병렬 분석 요청 핸들러 (아코디언 + 스켈레톤) ---
+// --- 다중 파일 병렬 분석 요청 핸들러 ---
 async function handleAssessmentRequest() {
     const validFiles = filesToAnalyze.filter(f => !f.error && f.text);
 
@@ -52,12 +52,13 @@ async function handleAssessmentRequest() {
         const summaryId = `summary-${fileId}`;
         const simId = `sim-${fileId}`;
 
-        // 1. 아코디언 구조 + 스켈레톤 로더 플레이스홀더 생성
+        // 1. 아코디언 구조 + 스켈레톤 로더 플레이스홀더 생성 (수정: 주석 제거, 제목 변경)
         const placeholderHtml = `
             <div id="${fileId}" class="card">
                 <h2><span id="status-${fileId}" class="status-icon">⏳</span> ${escapeHTML(file.name)}</h2>
 
-                <div class="accordion-item open"> {/* 평가는 기본 열림 */}
+                {/* --- 수정: open 옆 주석 제거 --- */}
+                <div class="accordion-item open">
                     <div class="accordion-header" onclick="toggleAccordion(this)">
                         <h3 class="accordion-title eval-title"><span class="section-icon">📊</span> 종합 점수 및 평가</h3>
                         <span class="accordion-toggle">▲</span>
@@ -91,7 +92,8 @@ async function handleAssessmentRequest() {
 
                 <div class="accordion-item">
                      <div class="accordion-header" onclick="toggleAccordion(this)">
-                        <h3 class="accordion-title similarity-title" style="color: var(--warning-dark);"><span class="section-icon">⚠️</span> 유사성 검토 항목</h3>
+                        {/* --- 수정: 유사성 -> 표절 검사 --- */}
+                        <h3 class="accordion-title similarity-title" style="color: var(--warning-dark);"><span class="section-icon">⚠️</span> 표절 검사 상세 리포트</h3>
                         <span class="accordion-toggle">▼</span>
                     </div>
                     <div class="accordion-content" id="${simId}">
@@ -116,7 +118,6 @@ async function handleAssessmentRequest() {
         ]).then(results => {
             // 모든 API 호출 완료 후 상태 아이콘 업데이트
             const statusIcon = document.getElementById(`status-${fileId}`);
-            // 하나라도 실패했는지 확인
             const hasError = results.some(result => result.status === 'rejected');
             if (statusIcon) {
                 if (hasError) {
@@ -147,15 +148,16 @@ async function handleAssessmentRequest() {
                     : renderErrorHtml("종합 점수 및 평가", evalResult.reason.message);
             }
             if (simElement) {
+                // (수정) 표절 검사 제목 전달
                 simElement.innerHTML = simResult.status === 'fulfilled'
                     ? renderSimilarityHtml(simResult.value)
-                    : renderErrorHtml("유사성 검토", simResult.reason.message);
+                    : renderErrorHtml("표절 검사 상세 리포트", simResult.reason.message);
             }
         });
     }
 }
 
-// --- (신규) 아코디언 토글 함수 ---
+// --- 아코디언 토글 함수 ---
 function toggleAccordion(headerElement) {
     const item = headerElement.closest('.accordion-item');
     const content = item.querySelector('.accordion-content');
@@ -165,6 +167,16 @@ function toggleAccordion(headerElement) {
         item.classList.remove('open');
         toggle.textContent = '▼';
     } else {
+        // Optional: Close other accordions in the same card when one opens
+        // const parentCard = item.closest('.card');
+        // if (parentCard) {
+        //     parentCard.querySelectorAll('.accordion-item.open').forEach(openItem => {
+        //         if (openItem !== item) {
+        //             openItem.classList.remove('open');
+        //             openItem.querySelector('.accordion-toggle').textContent = '▼';
+        //         }
+        //     });
+        // }
         item.classList.add('open');
         toggle.textContent = '▲';
     }
