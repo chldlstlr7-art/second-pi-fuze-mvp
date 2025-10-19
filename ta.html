@@ -8,101 +8,139 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.18/mammoth.browser.min.js"></script>
     <style>
         :root {
-            --primary-color: #059669; /* 조교/교수용 메인 색상 (Green) */
-            --warning-color: #F59E0B; /* 구조적 유사성 (Amber) */
-            --danger-color: #EF4444;  /* 텍스트 유사성 (Red) */
-            --bg-color: #F8FAFC;
+            --primary-color: #059669; /* Green */
+            --primary-light: #A7F3D0;
+            --primary-dark: #047857;
+            --warning-color: #F59E0B; /* Amber */
+            --warning-light: #FEF3C7;
+            --warning-dark: #B45309;
+            --danger-color: #EF4444;  /* Red */
+            --danger-light: #FEE2E2;
+            --danger-dark: #B91C1C;
+            --bg-color: #F8FAFC; /* Slightly cooler gray */
             --card-bg: #FFFFFF;
-            --text-dark: #1F2937;
-            --text-light: #6B7280;
-            --border-color: #E5E7EB;
-            --skeleton-bg: #E5E7EB; /* 스켈레톤 배경색 */
+            --text-dark: #1F2937; /* Darker gray */
+            --text-light: #6B7280; /* Medium gray */
+            --border-color: #E5E7EB; /* Lighter gray */
+            --skeleton-bg: #E5E7EB;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color); margin: 0; padding: 20px;
+            font-size: 16px; /* Base font size */
+            line-height: 1.6; /* Improved line spacing */
         }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 40px; }
-        .header h1 { font-size: 2.5em; font-weight: 800; color: var(--primary-color); margin: 0; }
-        .header p { font-size: 1.1em; color: var(--text-light); margin-top: 8px; }
-        .card { background-color: var(--card-bg); border-radius: 16px; padding: 35px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0, 30, 80, 0.08); border: 1px solid var(--border-color); }
+        .container { max-width: 900px; margin: 40px auto; } /* Added top/bottom margin */
+        .header { text-align: center; margin-bottom: 50px; }
+        .header h1 { font-size: 2.8em; font-weight: 800; color: var(--primary-color); margin: 0; }
+        .header p { font-size: 1.2em; color: var(--text-light); margin-top: 10px; }
+        .card {
+            background-color: var(--card-bg); border-radius: 16px; padding: 30px 35px; /* Adjusted padding */
+            margin-bottom: 25px; box-shadow: 0 4px 16px rgba(0, 30, 80, 0.06); /* Softer shadow */
+            border: 1px solid var(--border-color); transition: box-shadow 0.3s ease;
+        }
+        .card:hover { box-shadow: 0 8px 32px rgba(0, 30, 80, 0.1); }
         .hidden { display: none !important; }
 
         /* 파일 업로드 */
-        #drop-zone { border: 2px dashed var(--border-color); border-radius: 8px; padding: 40px; text-align: center; color: var(--text-light); background-color: #F9FAFB; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
-        #drop-zone.drag-over { background-color: #EFF6FF; border-color: var(--primary-color); }
+        #drop-zone { border: 2px dashed var(--border-color); border-radius: 12px; padding: 40px; text-align: center; color: var(--text-light); background-color: #F9FAFB; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; margin-bottom: 20px;}
+        #drop-zone.drag-over { background-color: #E0F2FE; border-color: #3B82F6; }
         #file-input { display: none; }
-        #file-list-container { margin-top: 20px; }
+        #file-list-container { margin-top: 25px; }
         #file-list { list-style-type: none; padding-left: 0; margin: 0; }
-        #file-list li { background-color: #F9FAFB; border: 1px solid var(--border-color); padding: 10px 15px; border-radius: 6px; margin-bottom: 8px; font-weight: 500; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center; }
-        #file-list li .status-text { color: var(--text-light); font-weight: normal; font-style: italic; }
-        #file-list li .status-error { color: #DC2626; font-weight: bold; }
+        #file-list li { background-color: #F9FAFB; border: 1px solid var(--border-color); padding: 12px 18px; border-radius: 8px; margin-bottom: 10px; font-weight: 500; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center; font-size: 0.95em;}
+        #file-list li .status-text { color: var(--text-light); font-weight: normal; font-style: italic; font-size: 0.9em; }
+        #file-list li .status-error { color: var(--danger-dark); font-weight: bold; font-size: 0.9em; }
 
-        button { display: block; width: 100%; padding: 15px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; margin-top: 20px; }
-        button:hover { background: #047857; }
-        button:disabled { background: #D1D5DB; cursor: not-allowed; }
+        button { display: block; width: 100%; padding: 16px; background-color: var(--primary-color); color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: background-color 0.2s, transform 0.1s ease; margin-top: 25px; }
+        button:hover { background-color: var(--primary-dark); }
+        button:active { transform: translateY(1px); }
+        button:disabled { background: #9CA3AF; cursor: not-allowed; }
+        #btn-restart { background: var(--text-light); }
+        #btn-restart:hover { background: var(--text-dark); }
 
-        /* --- 스켈레톤 로더 스타일 --- */
-        .skeleton {
-            background-color: var(--skeleton-bg);
-            border-radius: 4px;
-            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
+        /* --- 스켈레톤 로더 --- */
+        .skeleton { background-color: var(--skeleton-bg); border-radius: 4px; animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         .skeleton-title { height: 24px; width: 40%; margin-bottom: 15px; }
         .skeleton-line { height: 16px; margin-bottom: 10px; }
         .skeleton-line:last-child { margin-bottom: 0; }
-        .skeleton-circle { width: 100px; height: 100px; border-radius: 50%; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: .5; }
-        }
-        .skeleton-wrapper { padding: 25px; background-color: #F9FAFB; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px; }
-        .skeleton-eval-container { display: flex; gap: 25px; align-items: flex-start; }
+        .skeleton-circle { width: 80px; height: 80px; border-radius: 50%; } /* Slightly smaller */
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+        .skeleton-wrapper { padding: 25px; } /* Wrapper removed, applied directly now */
+        .skeleton-eval-container { display: flex; gap: 20px; align-items: center; } /* Adjusted gap/align */
         .skeleton-eval-text { flex-grow: 1; }
         /* --- 스켈레톤 로더 끝 --- */
 
 
-        /* 결과물 섹션 */
+        /* --- 결과 카드 및 아코디언 --- */
         #stage-result { padding-top: 20px; }
-        #stage-result .card h2 { font-size: 1.8em; color: var(--primary-color); margin-top: 0; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; }
-        #stage-result .card.error-card h2 { color: #DC2626; }
+        #stage-result .card h2 { display: flex; align-items: center; gap: 10px; font-size: 1.6em; color: var(--primary-color); margin: -5px 0 25px 0; /* Adjusted margin */ border-bottom: 2px solid var(--border-color); padding-bottom: 15px; }
+        #stage-result .card.error-card h2 { color: var(--danger-dark); }
 
-        h3 { display: flex; align-items: center; gap: 8px; font-size: 1.4em; color: var(--text-dark); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); }
-        .section-icon { font-size: 0.8em; /* 아이콘 크기 조정 */}
+        /* 상태 아이콘 */
+        .status-icon { font-size: 1.2em; line-height: 1; }
 
-        /* (수정) report-output 패딩 조정 */
-        .report-output { background-color: #F9FAFB; border-radius: 8px; padding: 20px 25px; border: 1px solid var(--border-color); margin-top: 20px; }
-        .report-output p, .report-output ul { font-size: 1.1em; line-height: 1.7; margin-top: 0; }
+        /* 아코디언 아이템 */
+        .accordion-item { border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 15px; overflow: hidden; background-color: #F9FAFB; }
+        .accordion-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 15px 20px; cursor: pointer;
+            background-color: var(--card-bg); border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s ease;
+        }
+        .accordion-header:hover { background-color: #F3F4F6; }
+        .accordion-item.open > .accordion-header { background-color: #F3F4F6; border-bottom-color: transparent;}
+
+        .accordion-title { font-size: 1.1em; font-weight: 600; color: var(--text-dark); margin: 0; flex-grow: 1; }
+        .accordion-toggle { font-size: 1.5em; color: var(--text-light); transition: transform 0.3s ease; }
+        .accordion-item.open .accordion-toggle { transform: rotate(180deg); }
+
+        .accordion-content { padding: 20px 25px; border-top: 1px solid var(--border-color); display: none; }
+        .accordion-item.open > .accordion-content { display: block; }
+        .accordion-content h3, .accordion-content h4 { margin-top: 0; border: none; padding: 0; font-size: 1.1em; color: var(--primary-color); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;}
+        .section-icon { font-size: 1.2em; display: inline-block; line-height: 1;}
+
+        /* 섹션별 제목 색상 */
+        #stage-result .accordion-content .eval-title { color: var(--primary-color); }
+        #stage-result .accordion-content .summary-title { color: #3B82F6; } /* Blue for summary */
+        #stage-result .accordion-content .similarity-title { color: var(--warning-dark); }
+
+
+        .report-output { padding: 0; border: none; margin: 0; background: none; } /* Removed default padding/border */
+        .report-output p { font-size: 1rem; line-height: 1.7; margin-top: 0; margin-bottom: 1rem; color: var(--text-dark);} /* Adjusted font-size */
         .report-output ul { padding-left: 20px; }
         .report-output ul li { margin-bottom: 10px; }
-        .report-output strong { color: var(--primary-color); }
+        .report-output strong { color: var(--primary-color); } /* Kept for [강점]/[개선점] if used */
 
-        /* 종합 점수 스타일 */
-        .eval-container { display: flex; gap: 25px; align-items: flex-start; margin-top: 15px; }
-        .score-circle { width: 100px; height: 100px; border-radius: 50%; background-color: var(--primary-color); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; flex-shrink: 0; }
-        .score-circle span { font-size: 2.5em; line-height: 1.1; }
-        .score-circle small { font-size: 0.9em; opacity: 0.8; }
+        /* 종합 점수 */
+        .eval-container { display: flex; gap: 20px; align-items: center; } /* Adjusted gap/align */
+        .score-circle { width: 80px; height: 80px; border-radius: 50%; background-color: var(--primary-color); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; flex-shrink: 0; }
+        .score-circle span { font-size: 2em; line-height: 1.1; }
+        .score-circle small { font-size: 0.8em; opacity: 0.8; margin-top: -2px;}
         .eval-draft { flex-grow: 1; }
-        .eval-draft p { font-style: italic; color: var(--text-light); margin-top: 0; }
+        .eval-draft p { font-style: italic; color: var(--text-light); margin: 0; font-size: 0.95rem;}
 
-        /* 유사성 검토 스타일 */
-        .similarity-subtitle { display: flex; align-items: center; gap: 8px; font-size: 1.1em; font-weight: bold; color: var(--text-dark); margin-top: 25px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+        /* 유사성 검토 */
+        .similarity-subtitle { display: flex; align-items: center; gap: 8px; font-size: 1em; font-weight: bold; color: var(--text-dark); margin-top: 25px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
         .similarity-list { list-style-type: none; padding-left: 0; margin-top: 0; }
         .similarity-list li.no-result { list-style-type: none; color: var(--text-light); font-style: italic; text-align: center; padding: 15px 0;}
-        .report-item { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
-        .report-item.structural { background-color: #FEFBEB; border-left: 5px solid var(--warning-color); }
-        .report-item.textual { background-color: #FEF2F2; border-left: 5px solid var(--danger-color); }
-        .report-item h4 { font-size: 1.1em; margin-top: 0; margin-bottom: 10px; color: var(--text-dark); font-weight: 600; word-break: keep-all; }
-        .report-item.structural h4 { color: #B45309; }
-        .report-item.textual h4 { color: #B91C1C; }
-        .suspicious-details { font-size: 0.95em; color: var(--text-light); line-height: 1.6; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); }
+        .report-item { background-color: var(--card-bg); padding: 15px 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; } /* Adjusted padding */
+        .report-item.structural { background-color: var(--warning-light); border-left: 4px solid var(--warning-color); } /* Use light bg */
+        .report-item.textual { background-color: var(--danger-light); border-left: 4px solid var(--danger-color); } /* Use light bg */
+        .report-item h4 { font-size: 1em; margin-top: 0; margin-bottom: 8px; color: var(--text-dark); font-weight: 600; word-break: keep-all; }
+        .report-item.structural h4 { color: var(--warning-dark); }
+        .report-item.textual h4 { color: var(--danger-dark); }
+        .suspicious-details { font-size: 0.9rem; color: var(--text-light); line-height: 1.6; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #E5E7EB; } /* Use lighter dashed line */
         .suspicious-details strong { font-weight: 600; }
-        .report-item.structural .suspicious-details strong { color: #D97706; }
-        .report-item.textual .suspicious-details strong { color: #B91C1C; }
-        .suspicious-details a { color: #059669; text-decoration: underline; word-break: break-all; }
-        .suspicious-details a:hover { color: #047857; }
-        .no-similarity-found { color: var(--text-light); padding: 20px; text-align: center; font-style: italic;}
+        .report-item.structural .suspicious-details strong { color: var(--warning-dark); }
+        .report-item.textual .suspicious-details strong { color: var(--danger-dark); }
+        .suspicious-details a { color: var(--primary-color); text-decoration: underline; word-break: break-all; }
+        .suspicious-details a:hover { color: var(--primary-dark); }
+        .no-similarity-found { color: var(--text-light); padding: 15px 0; text-align: center; font-style: italic;}
+
+        /* 에러 메시지 */
+        .error-output { border-color: var(--danger-color) !important; background-color: var(--danger-light) !important; }
+        .error-output h3, .error-output p { color: var(--danger-dark) !important; }
 
     </style>
 </head>
@@ -115,15 +153,15 @@
         </div>
 
         <div id="stage-input" class="card">
-            <h2>리포트 파일 업로드</h2>
+            <h2><span class="section-icon">📄</span> 리포트 파일 업로드</h2>
             <input type="file" id="file-input" accept=".pdf, .docx" multiple>
             <div id="drop-zone">
+                <span class="section-icon" style="font-size: 2em; color: var(--primary-light);">📤</span><br>
                 여기에 PDF 또는 .docx 파일들을 드래그 앤 드롭하세요
                 <br>또는 클릭하여 파일 선택
             </div>
             <div id="file-list-container">
-                <ul id="file-list">
-                </ul>
+                <ul id="file-list"></ul>
             </div>
             <button id="btn-start-assessment">선택된 파일 분석 시작</button>
         </div>
@@ -131,7 +169,9 @@
         <div id="stage-result" class="hidden">
              </div>
 
-        <button id="btn-restart" class="hidden" style="margin-top: 30px; background: #6B7280;">새 리포트 분석</button>
+        <button id="btn-restart" class="hidden" style="margin-top: 30px;">
+             <span class="section-icon">🔄</span> 새 리포트 분석
+        </button>
 
     </div>
 
