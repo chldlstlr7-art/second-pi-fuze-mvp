@@ -10,7 +10,7 @@ const btnStart = document.getElementById('btn-start-assessment');
 const btnRestart = document.getElementById('btn-restart');
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
-const fileListElement = document.getElementById('file-list'); // 이름 변경 주의
+const fileListElement = document.getElementById('file-list');
 
 // --- 이벤트 리스너 ---
 dropZone.addEventListener('click', () => fileInput.click());
@@ -31,7 +31,7 @@ dropZone.addEventListener('drop', async (e) => {
 btnStart.addEventListener('click', handleAssessmentRequest);
 btnRestart.addEventListener('click', () => location.reload());
 
-// --- (수정) 다중 파일 병렬 분석 요청 핸들러 (섹션별 로딩 표시 복원) ---
+// --- (수정) 다중 파일 병렬 분석 요청 핸들러 (스켈레톤 로더 적용) ---
 async function handleAssessmentRequest() {
     const validFiles = filesToAnalyze.filter(f => !f.error && f.text);
 
@@ -49,61 +49,63 @@ async function handleAssessmentRequest() {
     for (const file of validFiles) {
         const fileId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-        // 1. 각 섹션별 로딩 플레이스홀더 생성 (수정: 로딩 텍스트 추가)
+        // 1. 스켈레톤 로더 플레이스홀더 생성
         const placeholderHtml = `
             <div id="${fileId}" class="card">
                 <h2>${escapeHTML(file.name)}</h2>
-                <div id="eval-${fileId}" class="report-section-placeholder">
-                    <h3>종합 점수 및 평가</h3>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                       <div class="spinner-small"></div>
-                       <span style="color: var(--text-light); font-style: italic;">AI 분석 중: 평가 및 점수...</span>
+
+                <div id="eval-${fileId}" class="skeleton-wrapper">
+                    <div class="skeleton skeleton-title" style="width: 50%;"></div>
+                    <div class="skeleton-eval-container">
+                        <div class="skeleton skeleton-circle"></div>
+                        <div class="skeleton-eval-text">
+                            <div class="skeleton skeleton-line"></div>
+                            <div class="skeleton skeleton-line" style="width: 70%;"></div>
+                        </div>
                     </div>
                 </div>
-                <div id="summary-${fileId}" class="report-section-placeholder">
-                    <h3>핵심 요약</h3>
-                     <div style="display: flex; align-items: center; gap: 10px;">
-                       <div class="spinner-small"></div>
-                       <span style="color: var(--text-light); font-style: italic;">AI 분석 중: 핵심 요약...</span>
-                    </div>
+
+                <div id="summary-${fileId}" class="skeleton-wrapper">
+                    <div class="skeleton skeleton-title" style="width: 30%;"></div>
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-line" style="width: 80%;"></div>
                 </div>
-                <div id="sim-${fileId}" class="report-section-placeholder">
-                    <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3>
-                     <div style="display: flex; align-items: center; gap: 10px;">
-                       <div class="spinner-small"></div>
-                       <span style="color: var(--text-light); font-style: italic;">AI 분석 중: 유사성 검토...</span>
-                    </div>
+
+                <div id="sim-${fileId}" class="skeleton-wrapper">
+                    <div class="skeleton skeleton-title" style="width: 60%;"></div>
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-line" style="width: 90%;"></div>
+                    <div class="skeleton skeleton-line" style="margin-top: 20px;"></div>
+                    <div class="skeleton skeleton-line" style="width: 75%;"></div>
                 </div>
             </div>
         `;
         resultStage.insertAdjacentHTML('beforeend', placeholderHtml);
 
-        // 2. 비동기(await 없음)로 3개 API 동시 호출 및 개별 업데이트 (Promise.allSettled 제거)
+        // 2. 비동기(await 없음)로 3개 API 동시 호출 및 개별 업데이트
         callApiEndpoint('/api/ta-summary', { stage: 'summarize', reportText: file.text })
             .then(data => {
-                document.getElementById(`summary-${fileId}`).innerHTML = renderSummaryHtml(data);
+                document.getElementById(`summary-${fileId}`).outerHTML = renderSummaryHtml(data); // outerHTML로 교체
             })
             .catch(error => {
-                document.getElementById(`summary-${fileId}`).innerHTML = renderErrorHtml("핵심 요약", error.message);
+                document.getElementById(`summary-${fileId}`).outerHTML = renderErrorHtml("핵심 요약", error.message); // outerHTML로 교체
             });
 
         callApiEndpoint('/api/ta-evaluate', { stage: 'evaluate', reportText: file.text })
             .then(data => {
-                document.getElementById(`eval-${fileId}`).innerHTML = renderEvaluationHtml(data);
+                document.getElementById(`eval-${fileId}`).outerHTML = renderEvaluationHtml(data); // outerHTML로 교체
             })
             .catch(error => {
-                document.getElementById(`eval-${fileId}`).innerHTML = renderErrorHtml("종합 점수 및 평가", error.message);
+                document.getElementById(`eval-${fileId}`).outerHTML = renderErrorHtml("종합 점수 및 평가", error.message); // outerHTML로 교체
             });
 
         callApiEndpoint('/api/ta-similarity', { stage: 'check_similarity', reportText: file.text })
             .then(data => {
-                document.getElementById(`sim-${fileId}`).innerHTML = renderSimilarityHtml(data);
+                document.getElementById(`sim-${fileId}`).outerHTML = renderSimilarityHtml(data); // outerHTML로 교체
             })
             .catch(error => {
-                document.getElementById(`sim-${fileId}`).innerHTML = renderErrorHtml("유사성 검토", error.message);
+                document.getElementById(`sim-${fileId}`).outerHTML = renderErrorHtml("유사성 검토", error.message); // outerHTML로 교체
             });
     }
 }
-
-// --- (제거) 전체 결과 카드 HTML 생성 함수 ---
-// function renderFullResultCardHtml(results) { ... } // 이 함수는 더 이상 사용되지 않습니다.
