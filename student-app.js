@@ -42,10 +42,18 @@ const steps = {
 };
 const spinner = document.getElementById('loading-spinner');
 
-// --- Event Listener Setup ---
+// --- Event Listener Setup (FIXED) ---
 function initializeEventListeners() {
     document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
     document.getElementById('btn-retry').addEventListener('click', () => location.reload());
+    
+    // Listeners for buttons in hidden stages
+    document.getElementById('btn-show-questions').addEventListener('click', () => revealStage('questions'));
+    document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
+    document.getElementById('btn-restart').addEventListener('click', () => location.reload());
+    document.getElementById('btn-copy-result').addEventListener('click', handleCopyResult);
+    document.getElementById('btn-feedback-yes').addEventListener('click', () => handleFeedback(true));
+    document.getElementById('btn-feedback-no').addEventListener('click', () => handleFeedback(false));
 }
 
 // --- File Handling ---
