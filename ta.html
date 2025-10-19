@@ -1,109 +1,589 @@
-// 1. Google Gemini 라이브러리 가져오기
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TA/Professor Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.18/mammoth.browser.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #059669; /* 조교/교수용 메인 색상 (Green) */
+            --warning-color: #F59E0B; /* 구조적 유사성 (Amber) */
+            --danger-color: #EF4444;  /* 텍스트 유사성 (Red) */
+            --bg-color: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-dark: #1F2937;
+            --text-light: #6B7280;
+            --border-color: #E5E7EB;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin: 0;
+        }
+        .header p { font-size: 1.1em; color: var(--text-light); margin-top: 8px; }
 
-// 2. Vercel에 저장된 'GEMINI_API_KEY3' 가져오기 (유사성 검사용)
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY3);
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 30, 80, 0.08);
+            border: 1px solid var(--border-color);
+        }
+        .hidden { display: none !important; }
 
-// 3. AI 모델 설정
-const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-});
-
-// --- 프롬프트 엔지니어링 (유사성 검사 - 구조적/텍스트 분리) ---
-const promptForSimilarity = `
-You are an expert academic Teaching Assistant (TA).
-Your task is *only* to perform a similarity check on the following student report.
-You must categorize findings into *two distinct types*: 'structuralSimilarities' and 'textualSimilarities'.
-
-**Analysis Types:**
-1.  **Structural Similarities (구조적 유사성):** Analyze the report's overall structure, flow of ideas, argument logic, or unique conceptual framework. Compare it to known existing works, theories, or common patterns. Flag instances where the *structure itself* seems heavily borrowed, even if the words are different. (아이디어 전개 방식, 논리 구조 등이 기존 자료와 유사한 경우). Focus on *how* the argument is built.
-2.  **Textual Similarities (텍스트 유사성):** Analyze specific sentences or phrases within the report. Flag instances of direct word-for-word copying or minimal paraphrasing (only a few words changed) from external sources. Focus on *what* specific text overlaps.
-
-**JSON OUTPUT RULES:**
-- YOU MUST RESPOND WITH A VALID JSON OBJECT.
-- Do not include markdown \`\`\`json or any text outside the JSON structure.
-- Populate both arrays. If no instances of a type are found, return an empty array [] for that key.
-
-**JSON STRUCTURE:**
-{
-  "structuralSimilarities": [
-    {
-      "area": "<Describe the area of structural similarity (e.g., '보고서의 챕터 구성 방식', '핵심 주장의 논리 전개').>",
-      "likelySource": "<Name of the likely source of the structure/idea (e.g., '특정 연구 방법론', '유명 이론의 프레임워크', '일반적인 보고서 형식').>",
-      "sourceURL": "<A *possible* URL related to the source structure/idea. State 'N/A' if unknown or not applicable.>",
-      "similarityType": "<Explain *how* the structure is similar (e.g., '소스의 단계별 분석 구조를 그대로 따름', '특정 이론의 핵심 개념 순서를 차용함').>"
-    }
-  ],
-  "textualSimilarities": [
-    {
-      "phrase": "<The specific student's phrase with direct text overlap or minimal changes.>",
-      "likelySource": "<Name of the specific source text.>",
-      "sourceURL": "<A *possible* URL to the source text. State 'N/A' if unknown.>",
-      "similarityType": "<Explain *how* the text is similar (e.g., '출처 표기 없이 원문을 그대로 복사함', '단어 몇 개만 바꾸고 문장 구조는 동일함').>"
-    }
-  ]
-}
-`;
-
-// 4. Vercel 서버리스 함수
-module.exports = async (req, res) => {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-    }
-
-    try {
-        const { stage, reportText } = req.body;
-
-        // 이 API는 'check_similarity' stage만 처리
-        if (stage !== 'check_similarity' || !reportText) {
-            return res.status(400).json({ error: 'Invalid request. Must use stage "check_similarity" and provide reportText.' });
+        /* 파일 업로드 스타일 (변경 없음) */
+        #drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: var(--text-light);
+            background-color: #F9FAFB;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        #drop-zone.drag-over {
+            background-color: #EFF6FF;
+            border-color: var(--primary-color);
+        }
+        #file-input { display: none; }
+        #file-list-container { margin-top: 20px; }
+        #file-list { list-style-type: none; padding-left: 0; margin: 0; }
+        #file-list li {
+            background-color: #F9FAFB;
+            border: 1px solid var(--border-color);
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #file-list li .status-text {
+            color: var(--text-light);
+            font-weight: normal;
+            font-style: italic;
+        }
+        #file-list li .status-error {
+            color: #DC2626; /* Red */
+            font-weight: bold;
         }
 
-        const fullPrompt = `${promptForSimilarity}\n\nHere is the student's report:\n${reportText}`;
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 20px;
+        }
+        button:hover { background: #047857; }
+        button:disabled { background: #D1D5DB; cursor: not-allowed; }
 
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        let analysisResultText = response.text();
+        .spinner-small {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-left-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-top: 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        // 견고한 JSON 파싱
-        const jsonMatch = analysisResultText.match(/```json\s*([\s\S]*?)\s*```/);
-        if (jsonMatch && jsonMatch[1]) {
-            analysisResultText = jsonMatch[1];
-        } else {
-            const firstBrace = analysisResultText.indexOf('{');
-            const lastBrace = analysisResultText.lastIndexOf('}');
-            if (firstBrace !== -1 && lastBrace > firstBrace) {
-                 analysisResultText = analysisResultText.substring(firstBrace, lastBrace + 1);
+        /* 결과물 섹션 (변경 없음) */
+        #stage-result { padding-top: 20px; }
+        #stage-result .card h2 {
+            font-size: 1.8em;
+            color: var(--primary-color);
+            margin-top: 0;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        #stage-result .card.error-card h2 { color: #DC2626; }
+
+        h3 {
+            font-size: 1.4em;
+            color: var(--text-dark);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .report-output {
+            background-color: #F9FAFB;
+            border-radius: 8px;
+            padding: 25px;
+            border: 1px solid var(--border-color);
+            margin-top: 20px;
+        }
+        .report-section-placeholder {
+             padding: 25px;
+             background-color: #F9FAFB;
+             border-radius: 8px;
+             border: 1px solid var(--border-color);
+             margin-top: 20px;
+        }
+        .report-section-placeholder h3 {
+             border: none;
+             padding: 0;
+             margin: 0;
+        }
+
+        .report-output p, .report-output ul {
+            font-size: 1.1em;
+            line-height: 1.7;
+            margin-top: 0;
+        }
+        .report-output ul { padding-left: 20px; }
+        .report-output ul li { margin-bottom: 10px; }
+        .report-output strong { color: var(--primary-color); }
+
+        /* 종합 점수 스타일 (변경 없음) */
+        .eval-container { display: flex; gap: 25px; align-items: flex-start; }
+        .score-circle {
+            width: 100px; height: 100px; border-radius: 50%; background-color: var(--primary-color);
+            color: white; display: flex; flex-direction: column; justify-content: center;
+            align-items: center; font-weight: bold; flex-shrink: 0;
+        }
+        .score-circle span { font-size: 2.5em; line-height: 1.1; }
+        .score-circle small { font-size: 0.9em; opacity: 0.8; }
+        .eval-draft { flex-grow: 1; }
+        .eval-draft p { font-style: italic; color: var(--text-light); margin-top: 0; }
+
+        /* --- (수정) 유사성 검토 스타일 --- */
+        .similarity-subtitle {
+            font-size: 1.1em; font-weight: bold; color: var(--text-dark);
+            margin-top: 20px; margin-bottom: 15px; padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .similarity-list { list-style-type: none; padding-left: 0; margin-top: 0; }
+        .similarity-list li.no-result { list-style-type: none; color: var(--text-light); }
+
+        .similarity-card { border-radius: 8px; padding: 15px 20px; margin-bottom: 15px; }
+
+        /* (신규) 구조적 유사성 카드 (Amber) */
+        .similarity-card.type-structural {
+            border: 1px solid #FCD34D; background-color: #FFFBEB;
+        }
+        /* (신규) 텍스트 유사성 카드 (Red) */
+        .similarity-card.type-textual {
+            border: 1px solid #FCA5A5; background-color: #FEF2F2;
+        }
+
+        /* (신규) 구조적 유사성 설명 */
+        .similarity-description {
+            color: var(--text-dark); margin-top: 0; margin-bottom: 12px;
+            font-weight: 500; font-size: 1.1em; padding-left: 10px;
+             border-left: 4px solid var(--warning-color); /* Amber 강조선 */
+        }
+        /* (기존 수정) 텍스트 유사성 문구 */
+        .suspicious-phrase {
+            font-style: italic; color: var(--text-dark); margin-top: 0; margin-bottom: 12px;
+            font-weight: 500; font-size: 1.1em; padding-left: 10px; word-break: keep-all;
+             border-left: 4px solid var(--danger-color); /* Red 강조선 */
+        }
+
+        .suspicious-details {
+            font-size: 0.95em; color: var(--text-light); line-height: 1.6; padding-left: 14px;
+        }
+        /* (신규) 구조적 카드 텍스트 */
+        .similarity-card.type-structural .suspicious-details strong { color: #D97706; font-weight: 600; }
+        /* (기존 수정) 텍스트 카드 텍스트 */
+        .similarity-card.type-textual .suspicious-details strong { color: #B91C1C; font-weight: 600; }
+
+        .suspicious-details a { color: #059669; text-decoration: underline; word-break: break-all; }
+        .suspicious-details a:hover { color: #047857; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>TA/Professor Dashboard</h1>
+            <p>학생 리포트 요약 및 독창성 평가 초안 생성</p>
+        </div>
+
+        <div id="stage-input" class="card">
+            <h2>리포트 파일 업로드</h2>
+            <input type="file" id="file-input" accept=".pdf, .docx" multiple>
+            <div id="drop-zone">
+                여기에 PDF 또는 .docx 파일들을 드래그 앤 드롭하세요
+                <br>또는 클릭하여 파일 선택
+            </div>
+            <div id="file-list-container">
+                <ul id="file-list">
+                </ul>
+            </div>
+            <button id="btn-start-assessment">선택된 파일 분석 시작</button>
+        </div>
+
+        <div id="stage-result" class="hidden">
+        </div>
+
+        <button id="btn-restart" class="hidden" style="margin-top: 30px; background: #6B7280;">새 리포트 분석</button>
+
+    </div>
+
+<script>
+    // --- 글로벌 상태, DOM Elements (변경 없음) ---
+    let filesToAnalyze = [];
+    const inputStage = document.getElementById('stage-input');
+    const resultStage = document.getElementById('stage-result');
+    const btnStart = document.getElementById('btn-start-assessment');
+    const btnRestart = document.getElementById('btn-restart');
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileList = document.getElementById('file-list');
+
+    if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+    }
+
+    // --- 파일 이벤트 리스너 (변경 없음) ---
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileSelect);
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            handleFileSelect();
+        }
+    });
+
+    // --- 파일 처리 함수들 (변경 없음) ---
+    async function handleFileSelect() {
+        const files = fileInput.files;
+        if (!files || files.length === 0) return;
+        filesToAnalyze = [];
+        fileList.innerHTML = `<li><span class="status-text">${files.length}개 파일 읽는 중...</span></li>`;
+        const extractionPromises = Array.from(files).map(processFile);
+        const results = await Promise.all(extractionPromises);
+        filesToAnalyze = results;
+        fileList.innerHTML = '';
+        filesToAnalyze.forEach(file => {
+            const li = document.createElement('li');
+            let statusHtml = '';
+            if (file.error) {
+                statusHtml = `<span class="status-error">${file.error}</span>`;
+            } else {
+                statusHtml = `<span class="status-text" style="color: var(--primary-color);">준비 완료</span>`;
             }
-        }
+            li.innerHTML = `${escapeHTML(file.name)} ${statusHtml}`;
+            fileList.appendChild(li);
+        });
+    }
 
+    async function processFile(file) {
         try {
-            const analysisResultJson = JSON.parse(analysisResultText);
-            // 필수 키 존재 여부 확인 (더욱 견고하게)
-            if (!analysisResultJson.structuralSimilarities || !analysisResultJson.textualSimilarities) {
-                 throw new Error("AI response missing required keys (structuralSimilarities or textualSimilarities).");
+            let text = '';
+            if (file.type === 'application/pdf') {
+                text = await extractPdfText(file);
+            } else if (file.name.endsWith('.docx')) {
+                text = await extractDocxText(file);
+            } else {
+                throw new Error('지원하지 않는 파일 형식 (.pdf / .docx)');
             }
-            res.status(200).json(analysisResultJson);
-        } catch (e) {
-            console.error("JSON Parsing Error or Validation Failed (Similarity):", analysisResultText);
-            // JSON 파싱 실패 시 기본 구조라도 반환 (프론트엔드 오류 방지)
-            if (!res.headersSent) {
-                res.status(500).json({
-                    error: `AI 응답 처리 중 오류: ${e.message}`,
-                    structuralSimilarities: [],
-                    textualSimilarities: []
-                });
+            return { name: file.name, text: text };
+        } catch (error) {
+            console.error('File parsing error:', error);
+            return { name: file.name, text: null, error: error.message };
+        }
+    }
+
+    function extractDocxText(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const arrayBuffer = e.target.result;
+                mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                    .then(result => resolve(result.value))
+                    .catch(reject);
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    async function extractPdfText(file) {
+        const reader = new FileReader();
+        return new Promise((resolve, reject) => {
+            reader.onload = async (e) => {
+                const arrayBuffer = e.target.result;
+                try {
+                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                    const pdf = await loadingTask.promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).join(' ');
+                        fullText += pageText + '\n\n';
+                    }
+                    resolve(fullText);
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // --- 범용 API 호출 함수 (변경 없음) ---
+    async function callApiEndpoint(url, body) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2분 타임아웃
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `서버 오류: ${response.statusText}`);
             }
+            return await response.json();
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                 throw new Error('AI 응답 시간이 2분을 초과했습니다. (Timeout)');
+            }
+            throw error;
+        }
+    }
+
+    // --- 이벤트 리스너 (변경 없음) ---
+    btnStart.addEventListener('click', handleAssessmentRequest);
+    btnRestart.addEventListener('click', () => location.reload());
+
+    // --- 다중 파일 병렬 분석 요청 핸들러 (변경 없음) ---
+    async function handleAssessmentRequest() {
+        const validFiles = filesToAnalyze.filter(f => !f.error && f.text);
+
+        if (validFiles.length === 0) {
+            alert('분석할 유효한 파일이 없습니다. .pdf 또는 .docx 파일을 업로드해주세요.');
+            return;
         }
 
-    } catch (error) {
-        console.error('AI 분석 중 오류 (Similarity):', error);
-         if (!res.headersSent) {
-            res.status(500).json({
-                error: error.message || 'AI 모델 호출에 실패했습니다.',
-                structuralSimilarities: [],
-                textualSimilarities: []
-            });
-         }
+        inputStage.classList.add('hidden');
+        resultStage.classList.remove('hidden');
+        resultStage.innerHTML = '';
+        btnRestart.classList.remove('hidden');
+        btnStart.disabled = true;
+
+        for (const file of validFiles) {
+            const fileId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+            const placeholderHtml = `
+                <div id="${fileId}" class="card">
+                    <h2>${escapeHTML(file.name)}</h2>
+                    <div id="eval-${fileId}" class="report-section-placeholder">
+                        <h3>종합 점수 및 평가</h3><div class="spinner-small"></div>
+                    </div>
+                    <div id="summary-${fileId}" class="report-section-placeholder">
+                        <h3>핵심 요약</h3><div class="spinner-small"></div>
+                    </div>
+                    <div id="sim-${fileId}" class="report-section-placeholder">
+                        <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3><div class="spinner-small"></div>
+                    </div>
+                </div>
+            `;
+            resultStage.insertAdjacentHTML('beforeend', placeholderHtml);
+
+            // 요약 (api/ta-summary.js)
+            callApiEndpoint('/api/ta-summary', { stage: 'summarize', reportText: file.text })
+                .then(data => {
+                    document.getElementById(`summary-${fileId}`).innerHTML = renderSummaryHtml(data);
+                })
+                .catch(error => {
+                    document.getElementById(`summary-${fileId}`).innerHTML = renderErrorHtml("핵심 요약", error.message);
+                });
+
+            // 평가 (api/ta-evaluate.js)
+            callApiEndpoint('/api/ta-evaluate', { stage: 'evaluate', reportText: file.text })
+                .then(data => {
+                    document.getElementById(`eval-${fileId}`).innerHTML = renderEvaluationHtml(data);
+                })
+                .catch(error => {
+                    document.getElementById(`eval-${fileId}`).innerHTML = renderErrorHtml("종합 점수 및 평가", error.message);
+                });
+
+            // 유사성 (api/ta-similarity.js)
+            callApiEndpoint('/api/ta-similarity', { stage: 'check_similarity', reportText: file.text })
+                .then(data => {
+                    document.getElementById(`sim-${fileId}`).innerHTML = renderSimilarityHtml(data);
+                })
+                .catch(error => {
+                    document.getElementById(`sim-${fileId}`).innerHTML = renderErrorHtml("유사성 검토", error.message);
+                });
+        }
     }
-};
+
+    // --- HTML 렌더링 헬퍼 함수 ---
+
+    function renderSummaryHtml(data) {
+        return `
+            <div class="report-output">
+                <h3>핵심 요약</h3>
+                <p>${escapeHTML(data.summary)}</p>
+            </div>
+        `;
+    }
+
+    function renderEvaluationHtml(data) {
+        const { overallScore, originalityDraft } = data;
+
+        let scoreColor = 'var(--primary-color)';
+        if (overallScore < 70) scoreColor = '#F59E0B'; // Amber
+        if (overallScore < 50) scoreColor = '#EF4444'; // Red
+
+        return `
+            <div class="report-output">
+                <h3>종합 점수 및 평가</h3>
+                <div class="eval-container">
+                    <div class="score-circle" style="background-color: ${scoreColor};">
+                        <span>${overallScore}</span>
+                        <small>점</small>
+                    </div>
+                    <div class="eval-draft">
+                        <p>${escapeHTML(originalityDraft)}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- (수정) 유사성 렌더링 함수 (구조적/텍스트 분리) ---
+    function renderSimilarityHtml(data) {
+        // AI 응답이 예상과 다를 경우를 대비하여 기본값 설정
+        const structuralSimilarities = data.structuralSimilarities || [];
+        const textualSimilarities = data.textualSimilarities || [];
+
+        let structuralHtml = '';
+        let textualHtml = '';
+
+        // 1. 구조적 유사성 (Amber)
+        if (structuralSimilarities.length > 0) {
+            structuralHtml = structuralSimilarities.map(item => {
+                let urlHTML = '';
+                if (item.sourceURL && item.sourceURL.startsWith('http')) {
+                    urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceURL)}</a>`;
+                } else if (item.sourceURL && item.sourceURL !== 'N/A') {
+                    urlHTML = `<br><strong>추정 URL:</strong> ${escapeHTML(item.sourceURL)}`;
+                }
+
+                return `
+                    <li class="similarity-card type-structural">
+                        <p class="similarity-description">"${escapeHTML(item.area)}"</p>
+                        <div class="suspicious-details">
+                            <strong>유사 출처 (추정):</strong> ${escapeHTML(item.likelySource)}
+                            ${urlHTML}
+                            <br><strong>유사성 유형:</strong> ${escapeHTML(item.similarityType)}
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        } else {
+            structuralHtml = '<li class="no-result">해당 없음</li>';
+        }
+
+        // 2. 텍스트 유사성 (Red)
+        if (textualSimilarities.length > 0) {
+            textualHtml = textualSimilarities.map(item => {
+                let urlHTML = '';
+                if (item.sourceURL && item.sourceURL.startsWith('http')) {
+                    urlHTML = `<br><strong>추정 URL:</strong> <a href="${item.sourceURL}" target="_blank" rel="noopener noreferrer">${escapeHTML(item.sourceURL)}</a>`;
+                } else if (item.sourceURL && item.sourceURL !== 'N/A') {
+                    urlHTML = `<br><strong>추정 URL:</strong> ${escapeHTML(item.sourceURL)}`;
+                }
+
+                return `
+                    <li class="similarity-card type-textual">
+                        <p class="suspicious-phrase">"${escapeHTML(item.phrase)}"</p>
+                        <div class="suspicious-details">
+                            <strong>유사 출처 (추정):</strong> ${escapeHTML(item.likelySource)}
+                            ${urlHTML}
+                            <br><strong>유사성 유형:</strong> ${escapeHTML(item.similarityType)}
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        } else {
+            textualHtml = '<li class="no-result">해당 없음</li>';
+        }
+
+        // --- 두 섹션을 조합하여 최종 HTML 반환 ---
+        return `
+            <div class="report-output" style="background-color: #F9FAFB;">
+                <h3 style="color: #D97706;">유사성 검토 항목 (참고)</h3>
+
+                <h4 class="similarity-subtitle" style="color: var(--warning-color);">
+                    1. 구조적 유사성 (아이디어/논리 구조)
+                </h4>
+                <ul class="similarity-list">
+                    ${structuralHtml}
+                </ul>
+
+                <h4 class="similarity-subtitle" style="color: var(--danger-color); margin-top: 30px;">
+                    2. 텍스트 유사성 (문장/구절 복사)
+                </h4>
+                <ul class="similarity-list">
+                    ${textualHtml}
+                </ul>
+            </div>
+        `;
+    }
+
+    function renderErrorHtml(sectionTitle, errorMessage) {
+        return `
+            <div class="report-output" style="border-color: #FCA5A5; background-color: #FEF2F2;">
+                <h3 style="color: #DC2626;">${escapeHTML(sectionTitle)} (오류)</h3>
+                <p style="color: #B91C1C; font-weight: bold;">
+                    ${escapeHTML(errorMessage)}
+                </p>
+            </div>
+        `;
+    }
+
+    /**
+     * XSS 방지를 위한 간단한 HTML 이스케이프 함수
+     */
+    function escapeHTML(str) {
+        if (!str && str !== 0) return ''; // 0도 문자열로 변환되도록 수정
+        return String(str).replace(/[&<>"']/g, function(match) {
+            return {
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[match];
+        });
+    }
+
+</script>
+</body>
+</html>
