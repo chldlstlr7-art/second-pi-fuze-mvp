@@ -16,6 +16,7 @@
             --text-dark: #1F2937;
             --text-light: #6B7280;
             --border-color: #E5E7EB;
+            --skeleton-bg: #E5E7EB; /* 스켈레톤 배경색 */
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -28,7 +29,7 @@
         .card { background-color: var(--card-bg); border-radius: 16px; padding: 35px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0, 30, 80, 0.08); border: 1px solid var(--border-color); }
         .hidden { display: none !important; }
 
-        /* 파일 업로드 스타일 (변경 없음) */
+        /* 파일 업로드 */
         #drop-zone { border: 2px dashed var(--border-color); border-radius: 8px; padding: 40px; text-align: center; color: var(--text-light); background-color: #F9FAFB; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
         #drop-zone.drag-over { background-color: #EFF6FF; border-color: var(--primary-color); }
         #file-input { display: none; }
@@ -42,61 +43,66 @@
         button:hover { background: #047857; }
         button:disabled { background: #D1D5DB; cursor: not-allowed; }
 
-        .spinner-small { width: 20px; height: 20px; border: 3px solid rgba(0,0,0,0.1); border-left-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin-top: 10px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        /* --- 스켈레톤 로더 스타일 --- */
+        .skeleton {
+            background-color: var(--skeleton-bg);
+            border-radius: 4px;
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .skeleton-title { height: 24px; width: 40%; margin-bottom: 15px; }
+        .skeleton-line { height: 16px; margin-bottom: 10px; }
+        .skeleton-line:last-child { margin-bottom: 0; }
+        .skeleton-circle { width: 100px; height: 100px; border-radius: 50%; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .skeleton-wrapper { padding: 25px; background-color: #F9FAFB; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px; }
+        .skeleton-eval-container { display: flex; gap: 25px; align-items: flex-start; }
+        .skeleton-eval-text { flex-grow: 1; }
+        /* --- 스켈레톤 로더 끝 --- */
 
-        /* 결과물 섹션 (변경 없음) */
+
+        /* 결과물 섹션 */
         #stage-result { padding-top: 20px; }
         #stage-result .card h2 { font-size: 1.8em; color: var(--primary-color); margin-top: 0; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; }
         #stage-result .card.error-card h2 { color: #DC2626; }
 
-        h3 { font-size: 1.4em; color: var(--text-dark); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); }
-        .report-output { background-color: #F9FAFB; border-radius: 8px; padding: 25px; border: 1px solid var(--border-color); margin-top: 20px; }
-        .report-section-placeholder { padding: 25px; background-color: #F9FAFB; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px; }
-        .report-section-placeholder h3 { border: none; padding: 0; margin: 0; }
+        h3 { display: flex; align-items: center; gap: 8px; font-size: 1.4em; color: var(--text-dark); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); }
+        .section-icon { font-size: 0.8em; /* 아이콘 크기 조정 */}
+
+        /* (수정) report-output 패딩 조정 */
+        .report-output { background-color: #F9FAFB; border-radius: 8px; padding: 20px 25px; border: 1px solid var(--border-color); margin-top: 20px; }
         .report-output p, .report-output ul { font-size: 1.1em; line-height: 1.7; margin-top: 0; }
         .report-output ul { padding-left: 20px; }
         .report-output ul li { margin-bottom: 10px; }
         .report-output strong { color: var(--primary-color); }
 
-        /* 종합 점수 스타일 (변경 없음) */
-        .eval-container { display: flex; gap: 25px; align-items: flex-start; }
+        /* 종합 점수 스타일 */
+        .eval-container { display: flex; gap: 25px; align-items: flex-start; margin-top: 15px; }
         .score-circle { width: 100px; height: 100px; border-radius: 50%; background-color: var(--primary-color); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; flex-shrink: 0; }
         .score-circle span { font-size: 2.5em; line-height: 1.1; }
         .score-circle small { font-size: 0.9em; opacity: 0.8; }
         .eval-draft { flex-grow: 1; }
         .eval-draft p { font-style: italic; color: var(--text-light); margin-top: 0; }
 
-        /* --- (수정) 유사성 검토 스타일 (학생용 스타일 적용) --- */
+        /* 유사성 검토 스타일 */
+        .similarity-subtitle { display: flex; align-items: center; gap: 8px; font-size: 1.1em; font-weight: bold; color: var(--text-dark); margin-top: 25px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+        .similarity-list { list-style-type: none; padding-left: 0; margin-top: 0; }
+        .similarity-list li.no-result { list-style-type: none; color: var(--text-light); font-style: italic; text-align: center; padding: 15px 0;}
         .report-item { background-color: var(--bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
         .report-item.structural { background-color: #FEFBEB; border-left: 5px solid var(--warning-color); }
         .report-item.textual { background-color: #FEF2F2; border-left: 5px solid var(--danger-color); }
-
-        /* 아이템 내 제목/설명 */
-        .report-item h4 {
-            font-size: 1.1em;
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: var(--text-dark);
-            font-weight: 600;
-        }
-         .report-item.structural h4 { color: #B45309; /* Amber Dark */}
-         .report-item.textual h4 { color: #B91C1C; /* Red Dark */}
-
-        /* 아이템 내 상세 정보 (출처, URL, 유형) */
-        .suspicious-details {
-            font-size: 0.95em; color: var(--text-light); line-height: 1.6;
-            margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);
-        }
+        .report-item h4 { font-size: 1.1em; margin-top: 0; margin-bottom: 10px; color: var(--text-dark); font-weight: 600; word-break: keep-all; }
+        .report-item.structural h4 { color: #B45309; }
+        .report-item.textual h4 { color: #B91C1C; }
+        .suspicious-details { font-size: 0.95em; color: var(--text-light); line-height: 1.6; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); }
         .suspicious-details strong { font-weight: 600; }
         .report-item.structural .suspicious-details strong { color: #D97706; }
         .report-item.textual .suspicious-details strong { color: #B91C1C; }
-
         .suspicious-details a { color: #059669; text-decoration: underline; word-break: break-all; }
         .suspicious-details a:hover { color: #047857; }
-
-        .no-similarity-found { color: var(--text-light); padding: 20px; text-align: center; }
-        /* --- (수정 완료) 유사성 검토 스타일 --- */
+        .no-similarity-found { color: var(--text-light); padding: 20px; text-align: center; font-style: italic;}
 
     </style>
 </head>
@@ -104,8 +110,8 @@
 
     <div class="container">
         <div class="header">
-            <h1>TA/Professor Dashboard</h1>
-            <p>학생 리포트 요약 및 독창성 평가 초안 생성</p>
+            <h1>TA/Professor 환영합니다!</h1>
+            <p>AI-TA 기반 리포트 요약 및 평가 보조 시스템</p>
         </div>
 
         <div id="stage-input" class="card">
