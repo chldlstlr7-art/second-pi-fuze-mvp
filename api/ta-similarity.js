@@ -6,18 +6,18 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY3);
 
 // 3. AI 모델 설정
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash", 
+    model: "gemini-2.5-flash",
 });
 
-// --- 프롬프트 엔지니어링 (유사성 검사 - 2가지 유형 분리) ---
+// --- 프롬프트 엔지니어링 (유사성 검사 - 구조적/텍스트 분리) ---
 const promptForSimilarity = `
 You are an expert academic Teaching Assistant (TA).
 Your task is *only* to perform a similarity check on the following student report.
-You must categorize findings into *two distinct types*: 'paraphrasingPlagiarism' and 'copyPastePlagiarism'.
+You must categorize findings into *two distinct types*: 'structuralSimilarities' and 'textualSimilarities'.
 
 **Analysis Types:**
-1.  **Paraphrasing Plagiarism (의역 표절):** This is about *conceptual theft*. The student steals the core idea, logical structure, or unique concept from a source, even if they used different words. (단순히 단어를 바꾸는 수준을 넘어 원문의 아이디어와 개념을 도용하는 행위).
-2.  **Copy/Paste Plagiarism (단순 복제 표절):** This is about *textual theft*. The student copies text word-for-word (verbatim) or with only minimal changes (e.g., swapping a few words).
+1.  **Structural Similarities (구조적 유사성):** Analyze the report's overall structure, flow of ideas, argument logic, or unique conceptual framework. Compare it to known existing works, theories, or common patterns. Flag instances where the *structure itself* seems heavily borrowed, even if the words are different. (아이디어 전개 방식, 논리 구조 등이 기존 자료와 유사한 경우). Focus on *how* the argument is built.
+2.  **Textual Similarities (텍스트 유사성):** Analyze specific sentences or phrases within the report. Flag instances of direct word-for-word copying or minimal paraphrasing (only a few words changed) from external sources. Focus on *what* specific text overlaps.
 
 **JSON OUTPUT RULES:**
 - YOU MUST RESPOND WITH A VALID JSON OBJECT.
@@ -26,20 +26,20 @@ You must categorize findings into *two distinct types*: 'paraphrasingPlagiarism'
 
 **JSON STRUCTURE:**
 {
-  "paraphrasingPlagiarism": [
+  "structuralSimilarities": [
     {
-      "phrase": "<The student's phrase that conceptually copies an idea.>",
-      "likelySource": "<Name of the original source/idea.>",
-      "sourceURL": "<A *possible* URL to the source. State 'N/A' if unknown.>",
-      "similarityType": "<Explain *how* it's conceptual theft (e.g., '원본의 핵심 논리 구조를 그대로 차용함').>"
+      "area": "<Describe the area of structural similarity (e.g., '보고서의 챕터 구성 방식', '핵심 주장의 논리 전개').>",
+      "likelySource": "<Name of the likely source of the structure/idea (e.g., '특정 연구 방법론', '유명 이론의 프레임워크', '일반적인 보고서 형식').>",
+      "sourceURL": "<A *possible* URL related to the source structure/idea. State 'N/A' if unknown or not applicable.>",
+      "similarityType": "<Explain *how* the structure is similar (e.g., '소스의 단계별 분석 구조를 그대로 따름', '특정 이론의 핵심 개념 순서를 차용함').>"
     }
   ],
-  "copyPastePlagiarism": [
+  "textualSimilarities": [
     {
-      "phrase": "<The student's phrase that is a direct copy or minimally changed.>",
-      "likelySource": "<Name of the specific source.>",
-      "sourceURL": "<A *possible* URL to the source. State 'N/A' if unknown.>",
-      "similarityType": "<Explain *how* it's textual theft (e.g., '출처 표기 없이 원문을 그대로 복사함').>"
+      "phrase": "<The specific student's phrase with direct text overlap or minimal changes.>",
+      "likelySource": "<Name of the specific source text.>",
+      "sourceURL": "<A *possible* URL to the source text. State 'N/A' if unknown.>",
+      "similarityType": "<Explain *how* the text is similar (e.g., '출처 표기 없이 원문을 그대로 복사함', '단어 몇 개만 바꾸고 문장 구조는 동일함').>"
     }
   ]
 }
@@ -58,15 +58,15 @@ module.exports = async (req, res) => {
         if (stage !== 'check_similarity' || !reportText) {
             return res.status(400).json({ error: 'Invalid request. Must use stage "check_similarity" and provide reportText.' });
         }
-        
+
         const fullPrompt = `${promptForSimilarity}\n\nHere is the student's report:\n${reportText}`;
-        
+
         const result = await model.generateContent(fullPrompt);
         const response = await result.response;
         let analysisResultText = response.text();
 
         // 견고한 JSON 파싱
-        const jsonMatch = analysisResultText.match(/```json\s*([\sS]*?)\s*```/);
+        const jsonMatch = analysisResultText.match(/```json\s*([\s\S]*?)\s*```/);
         if (jsonMatch && jsonMatch[1]) {
             analysisResultText = jsonMatch[1];
         } else {
@@ -79,14 +79,31 @@ module.exports = async (req, res) => {
 
         try {
             const analysisResultJson = JSON.parse(analysisResultText);
+            // 필수 키 존재 여부 확인 (더욱 견고하게)
+            if (!analysisResultJson.structuralSimilarities || !analysisResultJson.textualSimilarities) {
+                 throw new Error("AI response missing required keys (structuralSimilarities or textualSimilarities).");
+            }
             res.status(200).json(analysisResultJson);
         } catch (e) {
-            console.error("JSON Parsing Error (Similarity):", analysisResultText); 
-            throw new Error(`AI가 유효하지 않은 JSON 형식으로 응답했습니다. (유사성)`);
+            console.error("JSON Parsing Error or Validation Failed (Similarity):", analysisResultText);
+            // JSON 파싱 실패 시 기본 구조라도 반환 (프론트엔드 오류 방지)
+            if (!res.headersSent) {
+                res.status(500).json({
+                    error: `AI 응답 처리 중 오류: ${e.message}`,
+                    structuralSimilarities: [],
+                    textualSimilarities: []
+                });
+            }
         }
 
     } catch (error) {
         console.error('AI 분석 중 오류 (Similarity):', error);
-        res.status(500).json({ error: error.message || 'AI 모델 호출에 실패했습니다.' });
+         if (!res.headersSent) {
+            res.status(500).json({
+                error: error.message || 'AI 모델 호출에 실패했습니다.',
+                structuralSimilarities: [],
+                textualSimilarities: []
+            });
+         }
     }
 };
