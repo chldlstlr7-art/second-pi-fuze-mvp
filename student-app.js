@@ -250,8 +250,8 @@ function renderAnalysisReport(data) {
 
     const calculatedTextScore = calculateTextPlagiarismScore(plagiarismReport.plagiarismSuspicion);
 
-    animateGauge('logical-gauge-arc', 'logical-gauge-text', logicalOriginalityScore);
-    animateGauge('text-gauge-arc', 'text-gauge-text', calculatedTextScore, true);
+    animateGauge('logical-gauge-arc', 'logical-gauge-text', logicalOriginalityScore, false, "점");
+    animateGauge('text-gauge-arc', 'text-gauge-text', calculatedTextScore, true, "%");
 
     const reasoningEl = document.getElementById('originality-reasoning-text');
     if (reasoningEl && structuralComparison) {
@@ -365,18 +365,18 @@ function handleFeedback(isHelpful) {
     document.getElementById('btn-feedback-no').disabled = true;
 }
 
-function animateValue(obj, start, end, duration) {
+function animateValue(obj, start, end, duration, suffix = "%") {
     let startTimestamp = null;
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        obj.textContent = Math.floor(progress * (end - start) + start) + "%";
+        obj.textContent = Math.floor(progress * (end - start) + start) + suffix;
         if (progress < 1) window.requestAnimationFrame(step);
     };
     window.requestAnimationFrame(step);
 }
 
-function animateGauge(arcId, textId, score, isReversed = false) {
+function animateGauge(arcId, textId, score, isReversed = false, suffix = "%") {
     const gaugeArc = document.getElementById(arcId);
     const gaugeText = document.getElementById(textId);
     if (!gaugeArc || !gaugeText) return;
@@ -387,6 +387,6 @@ function animateGauge(arcId, textId, score, isReversed = false) {
         : circumference - (score / 100) * circumference;
     
     gaugeArc.style.strokeDashoffset = offset;
-    animateValue(gaugeText, 0, score, 1200);
+    animateValue(gaugeText, 0, score, 1200, suffix);
 }
 
