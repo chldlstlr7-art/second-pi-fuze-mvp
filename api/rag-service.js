@@ -13,8 +13,12 @@ const isRagConfigured = GEMINI_API_KEY && PINECONE_API_KEY && PINECONE_ENVIRONME
 
 let pineconeIndex;
 if (isRagConfigured) {
-    const pinecone = new Pinecone({ apiKey: PINECONE_API_KEY, environment: PINECONE_ENVIRONMENT });
-    pineconeIndex = pinecone.index(PINECONE_INDEX_NAME);
+    try {
+        const pinecone = new Pinecone({ apiKey: PINECONE_API_KEY });
+        pineconeIndex = pinecone.index(PINECONE_INDEX_NAME);
+    } catch (error) {
+        console.error("Pinecone 초기화 실패:", error);
+    }
 }
 
 const embeddingModel = "models/text-embedding-004";
@@ -26,16 +30,16 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
  * @returns {Promise<string>} - 검색된 논문 초록들을 바탕으로 구성된 문맥(context)
  */
 async function searchRelevantContext(text) {
-    // RAG 설정이 없으면 빈 문맥을 반환하여 RAG 기능을 건너뜀
-    if (!isRagConfigured) {
+    // RAG 설정이 없거나 Pinecone 초기화에 실패했으면 빈 문맥을 반환
+    if (!isRagConfigured || !pineconeIndex) {
         console.log("RAG 설정이 없어 검색을 건너뜁니다.");
         return "";
     }
 
     try {
         console.time("RAG: Embedding user query");
-        const embeddingResult = await genAI.embedContent({ model: embeddingModel, content: text });
-        const userVector = embeddingResult.embedding;
+        const embeddingResult = await genAI.getEmbeddingModel({ model: embeddingModel }).embedContent(text);
+        const userVector = embeddingResult.embedding.values;
         console.timeEnd("RAG: Embedding user query");
 
         console.time("RAG: Querying Pinecone");
@@ -62,3 +66,4 @@ async function searchRelevantContext(text) {
 
 // 다른 파일에서 이 함수를 가져다 쓸 수 있도록 export
 module.exports = { searchRelevantContext };
+
