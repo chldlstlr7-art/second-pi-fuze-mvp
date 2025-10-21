@@ -324,13 +324,22 @@ function renderAnalysisReport(data) {
     }
 }
 
+// --- MODIFIED: calculateTextPlagiarismScore Function ---
 function calculateTextPlagiarismScore(plagiarismSuspicion) {
     if (!plagiarismSuspicion || plagiarismSuspicion.length === 0) return 0;
-    const totalSimilarity = plagiarismSuspicion.reduce((acc, item) => acc + item.similarityScore, 0);
-    const avgSimilarity = totalSimilarity / plagiarismSuspicion.length;
-    const highSimilarityCount = plagiarismSuspicion.filter(item => item.similarityScore >= 90).length;
+    
+    // Filter out items that might not have a valid similarityScore
+    const validItems = plagiarismSuspicion.filter(item => typeof item.similarityScore === 'number');
+    
+    if (validItems.length === 0) return 0;
+
+    const totalSimilarity = validItems.reduce((acc, item) => acc + item.similarityScore, 0);
+    const avgSimilarity = totalSimilarity / validItems.length;
+    const highSimilarityCount = validItems.filter(item => item.similarityScore >= 90).length;
+    
     return Math.min(100, Math.round((avgSimilarity / 3) + (highSimilarityCount * 15)));
 }
+
 
 function renderQuestionInputs(questions) {
     const container = document.getElementById('questions-container');
