@@ -284,14 +284,13 @@ function renderAnalysisReport(data) {
     }
 
     const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport?.plagiarismSuspicion);
-    const calculatedLogicalScore = logicalOriginalityScore !== undefined ? logicalOriginalityScore : 100 - Math.round((structuralComparison?.topicalSimilarity * 0.4 || 0) + (structuralComparison?.structuralSimilarity * 0.6 || 0));
-
+    const structuralPlagiarismRate = structuralComparison?.structuralSimilarity || 0;
     const reasoningEl = document.getElementById('originality-reasoning-text');
     if (reasoningEl) {
         reasoningEl.textContent = structuralComparison?.originalityReasoning || "분석 코멘트가 없습니다.";
     }
 
-    animateGauge('logical-gauge-arc', 'logical-gauge-text', calculatedLogicalScore);
+    animateGauge('logical-gauge-arc', 'logical-gauge-text', structuralPlagiarismRate);
     animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true);
 
     const reportContainer = document.getElementById('plagiarism-report-container');
