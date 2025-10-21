@@ -255,18 +255,18 @@
                     <div class="gauge-container">
                         <h4>구조적 유사성</h4>
                         <svg width="200" height="120" viewBox="0 0 200 120">
-                            <defs><linearGradient id="logicalGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#50E3C2"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#D0021B"/></linearGradient></defs>
+                            <defs><linearGradient id="riskGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#50E3C2"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#D0021B"/></linearGradient></defs>
                             <path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" />
-                            <path id="logical-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#logicalGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3;"/>
+                            <path id="logical-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#riskGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3;"/>
                             <text id="logical-gauge-text" x="100" y="95" text-anchor="middle" font-size="28px" font-weight="bold">0%</text>
                         </svg>
                     </div>
                     <div class="gauge-container">
                         <h4>텍스트 표절률</h4>
                         <svg width="200" height="120" viewBox="0 0 200 120">
-                            <defs><linearGradient id="textGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#50E3C2"/><stop offset="50%" stop-color="#F8E71C"/><stop offset="100%" stop-color="#D0021B"/></linearGradient></defs>
+                            <use href="#riskGaugeGradient" />
                             <path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#EAECEF" stroke-width="20" fill="none" />
-                            <path id="text-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#textGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3;"/>
+                            <path id="text-gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" stroke="url(#riskGaugeGradient)" stroke-width="20" fill="none" stroke-linecap="round" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3;"/>
                             <text id="text-gauge-text" x="100" y="95" text-anchor="middle" font-size="28px" font-weight="bold">0%</text>
                         </svg>
                     </div>
@@ -298,9 +298,7 @@
 
         <div id="stage-fusion" class="card hidden">
             <h2>3. 최종 제안</h2>
-            <div id="fusion-content-wrapper">
-                <!-- Fusion content will be injected here -->
-            </div>
+            <div id="fusion-content-wrapper"></div>
             <div class="action-buttons-container">
                 <button id="btn-copy-result">결과 텍스트로 복사</button>
                 <div class="feedback-section">
