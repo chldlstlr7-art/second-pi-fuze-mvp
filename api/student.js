@@ -1,46 +1,47 @@
 // 1. 라이브러리 및 RAG 서비스 모듈 가져오기
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { searchRelevantContext } = require('./rag-service.js'); // RAG 기능 가져오기
+const { searchRelevantContext } = require('./rag-service.js');
 
-// --- 'RAG 스위치' 설정 ---
-const isRagEnabled = process.env.ENABLE_RAG === 'true';
+// --- 코드 내 RAG 스위치 ---
+const ENABLE_RAG_IN_CODE = true; 
+const isRagEnabled = process.env.ENABLE_RAG === 'true' && ENABLE_RAG_IN_CODE;
 
-// 2. Gemini API 설정 (병렬 처리를 위해 2개 사용)
+// 2. Gemini API 설정 (병렬 처리용)
 const apiKeys = [ process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY2 ].filter(key => key);
 if (apiKeys.length < 2) { throw new Error("병렬 처리를 위해 2개의 Gemini API 키가 필요합니다."); }
 const model_1 = new GoogleGenerativeAI(apiKeys[0]).getGenerativeModel({ model: "gemini-2.5-flash" });
 const model_2 = new GoogleGenerativeAI(apiKeys[1]).getGenerativeModel({ model: "gemini-2.5-flash" });
 
-
 // --- 프롬프트 엔지니어링 ---
 
-// [작업 1] 개념/구조 분석 프롬프트 (질문 생성 X)
+// [작업 1] 개념/구조 분석 프롬프트 (RAG 비활성화 또는 폴백 시)
 const promptForConceptualAnalysis = `
-You are an expert AI consultant. Your task is to perform a conceptual and structural analysis of the user's text.
-First, classify the text into '창의적 사고와 글쓰기', '주장과 논리', or '혁신과 비즈니스'.
-Then, provide a detailed analysis. Be extremely fast and concise. Output JSON in Korean.
-**Structural Plagiarism Rule:** Only report if the SUBSTANTIVE LOGICAL FLOW within the SAME TOPIC is identical to a source. Do NOT flag generic formats.
-**JSON Rules:** Respond with a VALID JSON object without markdown.
-**JSON STRUCTURE:**
-{
-  "documentType": "<'창의적 사고와 글쓰기', '주장과 논리', or '혁신과 비즈니스'>",
-  "logicalOriginalityScore": <Number 0-100>, "coreSummary": ["<...>", "<...>", "<...>"], "logicFlowchart": "<A -> B -> C>",
-  "judgmentCriteria": ["<...>", "<...>", "<...>"],
-  "structuralComparison": { "sourceName": "<...>", "sourceLogic": "<...>", "topicalSimilarity": <...>, "structuralSimilarity": <...>, "originalityReasoning": "<...>" }
-}
-`;
-
-// [작업 1-RAG] RAG 적용 시 사용할 개념/구조 분석 프롬프트 (질문 생성 X)
-const promptForRagConceptualAnalysis = `
-You are an expert AI consultant. Based on the provided [Context] from academic papers, analyze the user's text.
-First, classify the text. Then, provide a detailed analysis. Your structural plagiarism check MUST be based on the [Context].
+You are an expert AI consultant. Perform a conceptual and structural analysis of the user's text.
+Provide a detailed analysis including raw scores. DO NOT generate questions.
 Be extremely fast and concise. Output JSON in Korean.
 **Structural Plagiarism Rule:** Only report if the SUBSTANTIVE LOGICAL FLOW within the SAME TOPIC is identical to a source. Do NOT flag generic formats.
 **JSON Rules:** Respond with a VALID JSON object without markdown.
 **JSON STRUCTURE:**
 {
-  "documentType": "<...>", "logicalOriginalityScore": <...>, "coreSummary": ["<...>", "<...>", "<...>"], "logicFlowchart": "<...>",
-  "judgmentCriteria": ["<...>", "<...>", "<...>"],
+  "documentType": "일반 문서",
+  "coreSummary": ["<1st key logic/sentence>", "<2nd key>", "<3rd key>"],
+  "logicFlowchart": "<A -> B -> C>",
+  "judgmentCriteria": ["논리 전개의 명확성", "주장의 독창성", "표현의 구체성"],
+  "structuralComparison": { "sourceName": "<...>", "sourceLogic": "<...>", "topicalSimilarity": <...>, "structuralSimilarity": <...>, "originalityReasoning": "<...>" }
+}
+`;
+
+// [작업 1-RAG] RAG 적용 시 사용할 프롬프트
+const promptForRagConceptualAnalysis = `
+You are an expert AI consultant. Based on the provided [Context], analyze the user's text.
+Your structural plagiarism check MUST be based on the [Context]. DO NOT generate questions.
+Output JSON in Korean.
+**JSON Rules:** Respond with a VALID JSON object without markdown.
+**JSON STRUCTURE:**
+{
+  "documentType": "RAG 기반 분석",
+  "coreSummary": ["<...>", "<...>", "<...>"], "logicFlowchart": "<...>",
+  "judgmentCriteria": ["참고 자료 연관성", "논리 구조의 독창성", "새로운 관점 제시"],
   "structuralComparison": { "sourceName": "<Name from Context>", "sourceLogic": "<...>", "topicalSimilarity": <...>, "structuralSimilarity": <...>, "originalityReasoning": "<Explain based on Context>" }
 }
 `;
@@ -57,15 +58,13 @@ Be extremely fast and concise. Output JSON in Korean.
 // [작업 3] 질문 생성 전용 프롬프트
 const promptForQuestions = `
 Based on the user's text, generate three insightful and probing questions.
-The questions should be relevant to the text's content. Provide the questions in a JSON format, in Korean. Be extremely fast.
+Provide the questions in a JSON format, in Korean. Be extremely fast.
 **JSON OUTPUT RULES:** Respond with a VALID JSON object without markdown.
-**JSON STRUCTURE:**
-{ "questions": ["<Question 1>", "<Question 2>", "<Question 3>"] }
+**JSON STRUCTURE:** { "questions": ["<...>", "<...>", "<...>"] }
 `;
 
 // [작업 4] 최종 융합 아이디어 생성용 프롬프트
 const promptForStep2 = `...`; // (기존과 동일)
-
 
 // --- Helper function to safely parse JSON ---
 function safeJsonParse(text) {
@@ -82,7 +81,6 @@ function safeJsonParse(text) {
         return null;
     }
 }
-
 
 // Vercel 서버리스 함수
 module.exports = async (req, res) => {
@@ -101,16 +99,24 @@ module.exports = async (req, res) => {
             
             console.time("Parallel API Calls");
             let conceptualPromise;
+            
             if (isRagEnabled) {
-                console.log("RAG 모드가 활성화되었습니다.");
                 const context = await searchRelevantContext(idea);
-                const fullPrompt = `${promptForRagConceptualAnalysis}\n\n[Context]:\n${context}\n\n[User's Text]:\n${idea}`;
-                conceptualPromise = model_1.generateContent(fullPrompt).then(r => r.response.text());
+                if (context && context.length > 10) {
+                    console.log("RAG 문맥을 찾았습니다. RAG 기반 분석을 시작합니다.");
+                    const fullPrompt = `${promptForRagConceptualAnalysis}\n\n[Context]:\n${context}\n\n[User's Text]:\n${idea}`;
+                    conceptualPromise = model_1.generateContent(fullPrompt).then(r => r.response.text());
+                } else {
+                    console.log("유사한 문맥을 찾지 못했습니다. AI 내부 지식 기반으로 분석합니다 (Fallback).");
+                    const fullPrompt = `${promptForConceptualAnalysis}\n\n[User's Text]:\n${idea}`;
+                    conceptualPromise = model_1.generateContent(fullPrompt).then(r => r.response.text());
+                }
             } else {
                 console.log("RAG 모드가 비활성화되었습니다.");
                 const fullPrompt = `${promptForConceptualAnalysis}\n\n[User's Text]:\n${idea}`;
                 conceptualPromise = model_1.generateContent(fullPrompt).then(r => r.response.text());
             }
+
             const textualPromise = model_2.generateContent(`${promptForTextualAnalysis}\n\n[User's Text]:\n${idea}`).then(r => r.response.text());
             
             const results = await Promise.allSettled([conceptualPromise, textualPromise]);
@@ -124,8 +130,15 @@ module.exports = async (req, res) => {
             if (!conceptualJson || !textualJson) { throw new Error("AI 응답을 JSON으로 변환하는 데 실패했습니다."); }
             
             finalResultJson = {
-                ...conceptualJson,
-                plagiarismReport: { plagiarismSuspicion: textualJson.plagiarismSuspicion || [] }
+                documentType: conceptualJson.documentType,
+                coreSummary: conceptualJson.coreSummary,
+                logicFlowchart: conceptualJson.logicFlowchart,
+                judgmentCriteria: conceptualJson.judgmentCriteria,
+                structuralComparison: conceptualJson.structuralComparison,
+                // `questions`는 이 단계에서 생성하지 않으므로 포함하지 않음
+                plagiarismReport: {
+                    plagiarismSuspicion: textualJson.plagiarismSuspicion || [],
+                }
             };
 
         } else if (stage === 'generate_questions') {
@@ -136,9 +149,16 @@ module.exports = async (req, res) => {
             console.timeEnd("API Call: Questions");
 
         } else if (stage === 'fuse') {
-            // ... (기존과 동일) ...
+            if (!originalIdea || !answers) { console.timeEnd("Total Request Time"); return res.status(400).json({ error: 'Missing originalIdea or answers.' }); }
+            
+            console.time("API Call: Fusion");
+            const result = await model_1.generateContent(`${promptForStep2}\n\n[Original Idea]:\n${originalIdea}\n\n[User's Answers]:\n${answers.join('\n')}`);
+            finalResultJson = safeJsonParse(result.response.text());
+            console.timeEnd("API Call: Fusion");
+        
         } else {
-            // ... (기존과 동일) ...
+            console.timeEnd("Total Request Time");
+            return res.status(400).json({ error: 'Invalid stage provided.' });
         }
 
         if (!finalResultJson) { throw new Error("최종 결과 생성에 실패했습니다."); }
