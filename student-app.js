@@ -49,12 +49,13 @@ function initializeEventListeners() {
     document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
     document.getElementById('btn-retry').addEventListener('click', () => location.reload());
     
-    // Add event listeners for all buttons, even hidden ones
+    // These buttons are inside hidden stages, so we attach listeners to them directly.
     document.getElementById('btn-show-questions').addEventListener('click', () => {
         if (aiQuestions.length > 0) {
             revealStage('questions');
         } else {
-            handleError("질문이 아직 생성되지 않았습니다. 잠시 후 다시 시도해주세요.", true);
+            // This case handles if the background generation failed and user clicks again
+            handleQuestionGenerationInBackground();
         }
     });
     document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
@@ -250,6 +251,7 @@ async function handleFusionRequest() {
     }
 }
 
+// --- Rendering Functions (FIXED) ---
 function renderAnalysisReport(data) {
     const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport } = data;
     
@@ -296,6 +298,9 @@ function renderAnalysisReport(data) {
     if (!hasContent) {
         reportContainer.innerHTML = '<p>표절 의심 항목이 발견되지 않았습니다.</p>';
     }
+
+    // Enable the questions button after rendering
+    document.getElementById('btn-show-questions').disabled = false;
 }
 
 function calculateTextPlagiarismScore(plagiarismSuspicion) {
