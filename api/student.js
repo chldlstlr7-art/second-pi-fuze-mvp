@@ -12,7 +12,7 @@ if (apiKeys.length < 2) { throw new Error("병렬 처리를 위해 2개의 Gemin
 const model_1 = new GoogleGenerativeAI(apiKeys[0]).getGenerativeModel({ model: "gemini-2.5-flash" });
 const model_2 = new GoogleGenerativeAI(apiKeys[1]).getGenerativeModel({ model: "gemini-2.5-flash" });
 
-// --- 프롬프트 엔지니어링 ---
+// --- 프롬프트 엔지니어링 (수정됨) ---
 
 // [작업 1] 개념/구조 분석 프롬프트 (RAG 비활성화 또는 폴백 시)
 const promptForConceptualAnalysis = `
@@ -27,7 +27,7 @@ Be extremely fast and concise. Output JSON in Korean.
   "coreSummary": ["<1st key logic/sentence>", "<2nd key>", "<3rd key>"],
   "logicFlowchart": "<A -> B -> C>",
   "judgmentCriteria": ["논리 전개의 명확성", "주장의 독창성", "표현의 구체성"],
-  "structuralComparison": { "sourceName": "<...>", "sourceLogic": "<...>", "topicalSimilarity": <...>, "structuralSimilarity": <...>, "originalityReasoning": "<...>" }
+  "structuralComparison": { "sourceName": "<...>", "sourceLogic": "<...>", "topicalSimilarity": <Number>, "structuralSimilarity": <Number>, "originalityReasoning": "<...>" }
 }
 `;
 
@@ -42,7 +42,7 @@ Output JSON in Korean.
   "documentType": "RAG 기반 분석",
   "coreSummary": ["<...>", "<...>", "<...>"], "logicFlowchart": "<...>",
   "judgmentCriteria": ["참고 자료 연관성", "논리 구조의 독창성", "새로운 관점 제시"],
-  "structuralComparison": { "sourceName": "<Name from Context>", "sourceLogic": "<...>", "topicalSimilarity": <...>, "structuralSimilarity": <...>, "originalityReasoning": "<Explain based on Context>" }
+  "structuralComparison": { "sourceName": "<Name from Context>", "sourceLogic": "<...>", "topicalSimilarity": <Number>, "structuralSimilarity": <Number>, "originalityReasoning": "<Explain based on Context>" }
 }
 `;
 
@@ -50,9 +50,9 @@ Output JSON in Korean.
 const promptForTextualAnalysis = `
 You are a plagiarism detection specialist. Your ONLY task is to analyze the user's text for direct textual similarities.
 Be extremely fast and concise. Output JSON in Korean.
-**Rules:** Report ALL instances with similarityScore >= 90%, including 'userSentence' and 'originalSentence'. Respond with a VALID JSON object without markdown.
+**Rules:** Report ALL instances with similarityScore >= 90%, including 'userSentence' and 'originalSentence'. For the 'source', if unknown, state '일반적인 표현'. Do NOT invent sources. Respond with a VALID JSON object without markdown.
 **JSON STRUCTURE:**
-{ "plagiarismSuspicion": [{ "userSentence": "<...>", "originalSentence": "<...>", "source": "<...>", "similarityScore": <...> }] }
+{ "plagiarismSuspicion": [{ "userSentence": "<...>", "originalSentence": "<...>", "source": "<...>", "similarityScore": <Number> }] }
 `;
 
 // [작업 3] 질문 생성 전용 프롬프트
@@ -68,10 +68,7 @@ const promptForStep2 = `
 You are a creative strategist. Synthesize the [Original Idea] and [User's Answers] into a 'Fused Idea'.
 Your goal is to provide a concise analysis and concrete, actionable edit suggestions.
 Be extremely concise and fast, in Korean.
-
-**JSON OUTPUT RULES:**
-- YOU MUST RESPOND WITH A VALID JSON OBJECT. Do not include markdown \`\`\`json.
-
+**JSON OUTPUT RULES:** Respond with a VALID JSON object without markdown.
 **JSON STRUCTURE:**
 {
   "fusionTitle": "<A new, compelling name for the fused idea.>",
