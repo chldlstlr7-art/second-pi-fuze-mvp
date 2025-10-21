@@ -64,8 +64,30 @@ Provide the questions in a JSON format, in Korean. Be extremely fast.
 `;
 
 // [작업 4] 최종 융합 아이디어 생성용 프롬프트
-const promptForStep2 = `...`; // (기존과 동일)
+const promptForStep2 = `
+You are a creative strategist. Synthesize the [Original Idea] and [User's Answers] into a 'Fused Idea'.
+Your goal is to provide a concise analysis and concrete, actionable edit suggestions.
+Be extremely concise and fast, in Korean.
 
+**JSON OUTPUT RULES:**
+- YOU MUST RESPOND WITH A VALID JSON OBJECT. Do not include markdown \`\`\`json.
+
+**JSON STRUCTURE:**
+{
+  "fusionTitle": "<A new, compelling name for the fused idea.>",
+  "analysis": {
+    "originalSummary": "<Summarize the core of the original idea in one or two sentences.>",
+    "keyChange": "<Explain the most critical change based on the user's answers in one or two sentences.>",
+    "conclusion": "<Describe the final fused idea's new value proposition in one or two sentences.>"
+  },
+  "suggestedEdits": [
+    {
+      "originalText": "<Select a specific, important paragraph from the user's [Original Idea] that needs improvement.>",
+      "suggestedRevision": "<Provide a rewritten, improved version of that paragraph/section, reflecting the fusion.>"
+    }
+  ]
+}
+`;
 // --- Helper function to safely parse JSON ---
 function safeJsonParse(text) {
     try {
