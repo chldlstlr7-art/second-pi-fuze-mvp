@@ -48,11 +48,77 @@ const loadingText = document.getElementById('loading-text');
 function initializeEventListeners() {
     document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
     document.getElementById('btn-retry').addEventListener('click', () => location.reload());
+    document.getElementById('btn-show-questions').addEventListener('click', () => revealStage('questions'));
+    document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
+    document.getElementById('btn-restart').addEventListener('click', () => location.reload());
+    document.getElementById('btn-copy-result').addEventListener('click', handleCopyResult);
+    document.getElementById('btn-feedback-yes').addEventListener('click', () => handleFeedback(true));
+    document.getElementById('btn-feedback-no').addEventListener('click', () => handleFeedback(false));
 }
 
 // --- File Handling ---
 function setupFileHandling({ dropArea, fileInput, fileNameDisplay, ideaTextarea, spinner }) {
-    // ... (This section is correct and remains unchanged)
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+        document.body.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    ['dragenter', 'dragover'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false));
+    ['dragleave', 'drop'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false));
+    
+    dropArea.addEventListener('drop', e => handleFiles(e.dataTransfer.files), false);
+    dropArea.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+    async function handleFiles(files) {
+        if (files.length > 1) { return alert("하나의 파일만 업로드할 수 있습니다."); }
+        const file = files[0];
+        const validTypes = ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!validTypes.includes(file.type)) { return alert("허용된 파일 형식이 아닙니다. (.txt, .pdf, .docx)"); }
+
+        fileNameDisplay.textContent = `파일 처리 중: ${file.name}`;
+        loadingContainer.classList.remove('hidden');
+        ideaTextarea.value = '';
+
+        try {
+            let text = '';
+            if (file.type === 'text/plain') { text = await file.text(); } 
+            else if (file.type === 'application/pdf') { text = await extractTextFromPdf(file); } 
+            else if (file.type.includes('wordprocessingml')) { text = await extractTextFromDocx(file); }
+            
+            ideaTextarea.value = text;
+            fileNameDisplay.textContent = `파일 로드 완료: ${file.name}`;
+        } catch (error) {
+            handleError(`파일 처리 실패: ${error.message}`);
+            fileNameDisplay.textContent = "";
+        } finally {
+            loadingContainer.classList.add('hidden');
+        }
+    }
+    
+    function extractTextFromDocx(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                mammoth.extractRawText({ arrayBuffer: event.target.result })
+                    .then(result => resolve(result.value))
+                    .catch(reject);
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    async function extractTextFromPdf(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let textContent = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const text = await page.getTextContent();
+            textContent += text.items.map(s => s.str).join(' ');
+        }
+        return textContent;
+    }
 }
 
 // --- UI Control Functions ---
@@ -83,12 +149,58 @@ function finalizeStage(stageName) {
 }
 
 function handleError(message, showRetry = true) {
-    // ... (This section is correct and remains unchanged)
+    const errorContainer = document.getElementById('error-message-container');
+    const errorText = document.getElementById('error-text');
+    if(errorText) errorText.textContent = message;
+    if(errorContainer) errorContainer.classList.remove('hidden');
+    
+    const btnRetry = document.getElementById('btn-retry');
+    if(btnRetry) btnRetry.style.display = showRetry ? 'inline-block' : 'none';
+    
+    if(errorContainer) errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if(loadingContainer) loadingContainer.classList.add('hidden');
+    clearInterval(loadingInterval);
 }
 
 // --- API Call Function ---
 async function callApi(body) {
-    // ... (This section is correct and remains unchanged)
+    loadingContainer.classList.remove('hidden');
+    loadingContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const messages = ["AI가 문서를 분류 중입니다...", "논리 구조를 분석하고 있습니다...", "표절 검사를 수행 중입니다...", "리포트를 생성 중입니다..."];
+    let messageIndex = 0;
+    loadingText.textContent = messages[messageIndex];
+    loadingInterval = setInterval(() => {
+        messageIndex = (messageIndex + 1) % messages.length;
+        loadingText.textContent = messages[messageIndex];
+    }, 3000);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 50000); 
+    try {
+        const response = await fetch('/api/student', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `서버 오류: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            handleError('AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요.');
+        } else {
+            handleError(`분석 중 오류가 발생했습니다: ${error.message}`);
+        }
+        return null;
+    } finally {
+        loadingContainer.classList.add('hidden');
+        clearInterval(loadingInterval);
+    }
 }
 
 // --- Main Logic Functions ---
@@ -122,11 +234,10 @@ async function handleFusionRequest() {
     }
 }
 
-// --- Rendering Functions (FIXED) ---
+// --- Rendering Functions ---
 function renderAnalysisReport(data) {
     const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport } = data;
     
-    // Populate static elements first
     document.getElementById('analysis-doc-type').textContent = `(분석 유형: ${documentType || '알 수 없음'})`;
     document.getElementById('core-summary-list').innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
     document.getElementById('logic-flowchart').innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
@@ -170,13 +281,7 @@ function renderAnalysisReport(data) {
     if (!hasContent) {
         reportContainer.innerHTML = '<p>표절 의심 항목이 발견되지 않았습니다.</p>';
     }
-
-    // Re-enable and re-attach listener for the questions button
-    const questionsButton = document.getElementById('btn-show-questions');
-    questionsButton.disabled = false;
-    questionsButton.onclick = () => revealStage('questions'); // Simple re-attachment
 }
-
 
 function calculateTextPlagiarismScore(plagiarismSuspicion) {
     if (!plagiarismSuspicion || plagiarismSuspicion.length === 0) return 0;
