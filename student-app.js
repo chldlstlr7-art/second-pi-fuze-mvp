@@ -248,7 +248,7 @@ function renderAnalysisReport(data) {
     }
 
     // Gauges are now for plagiarism rates (higher is worse)
-    animateGauge('logical-gauge-arc', 'logical-gauge-text', structuralPlagiarismRate, true, '점');
+    animateGauge('logical-gauge-arc', 'logical-gauge-text', 100-structuralPlagiarismRate, true, '점');
     animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true, '%');
 
     const reportContainer = document.getElementById('plagiarism-report-container');
