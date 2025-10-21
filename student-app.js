@@ -1,3 +1,4 @@
+<script>
 document.addEventListener('DOMContentLoaded', () => {
     const userData = localStorage.getItem('pi-fuze-user');
     if (!userData) {
@@ -239,17 +240,26 @@ function renderAnalysisReport(data) {
     document.getElementById('core-summary-list').innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
     document.getElementById('logic-flowchart').innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
 
-    const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport.plagiarismSuspicion);
-    const structuralPlagiarismRate = structuralComparison ? Math.round((structuralComparison.topicalSimilarity * 0.4) + (structuralComparison.structuralSimilarity * 0.6)) : 0;
+    const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport?.plagiarismSuspicion);
+    const structuralPlagiarismRate = structuralComparison 
+        ? Math.round((structuralComparison.topicalSimilarity * 0.4) + (structuralComparison.structuralSimilarity * 0.6))
+        : 0;
 
     const reasoningEl = document.getElementById('originality-reasoning-text');
     if (reasoningEl && structuralComparison) {
         reasoningEl.textContent = structuralComparison.originalityReasoning || "분석 코멘트가 없습니다.";
     }
 
-    // Gauges are now for plagiarism rates (higher is worse)
-    animateGauge('logical-gauge-arc', 'logical-gauge-text', structuralPlagiarismRate, true);
-    animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true);
+    // [유지] 게이지는 표절률(%) 전용
+    animateGauge('logical-gauge-arc', 'logical-gauge-text', structuralPlagiarismRate, true, 'percent');
+    animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true, 'percent');
+
+    // [신규] 독창성 점수(점) 출력: 100 - 구조 표절률을 기본 점수로 사용
+    const originalityPointsTarget = document.getElementById('originality-score-text');
+    if (originalityPointsTarget) {
+        const originalityPoints = Math.max(0, Math.min(100, 100 - structuralPlagiarismRate));
+        animateNumber(originalityPointsTarget, 0, originalityPoints, 1200, 'points'); // “00점”으로 표기
+    }
 
     const reportContainer = document.getElementById('plagiarism-report-container');
     reportContainer.innerHTML = '';
@@ -259,7 +269,11 @@ function renderAnalysisReport(data) {
         hasContent = true;
         const itemDiv = document.createElement('div');
         itemDiv.className = 'report-item structural';
-        itemDiv.innerHTML = `<h4>구조적 유사성</h4><p><strong>유사사례:</strong> ${structuralComparison.sourceName}</p><p><strong>유사 논리 구조:</strong> ${structuralComparison.sourceLogic}</p><p><strong>구조 일치율:</strong> ${structuralComparison.structuralSimilarity}%</p><div class="similarity-bar-container"><div class="similarity-bar" style="width: ${structuralComparison.structuralSimilarity}%;"></div></div>`;
+        itemDiv.innerHTML = `<h4>구조적 유사성</h4>
+            <p><strong>유사사례:</strong> ${structuralComparison.sourceName}</p>
+            <p><strong>유사 논리 구조:</strong> ${structuralComparison.sourceLogic}</p>
+            <p><strong>구조 일치율:</strong> ${structuralComparison.structuralSimilarity}%</p>
+            <div class="similarity-bar-container"><div class="similarity-bar" style="width: ${structuralComparison.structuralSimilarity}%;"></div></div>`;
         reportContainer.appendChild(itemDiv);
     }
 
@@ -267,12 +281,16 @@ function renderAnalysisReport(data) {
         hasContent = true;
         const textualSection = document.createElement('div');
         textualSection.innerHTML = `<h4 style="margin-top:30px;">텍스트 유사성</h4>`;
-        plagiarismReport.plagiarismSuspicion.sort((a, b) => b.similarityScore - a.similarityScore).forEach(item => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'report-item textual';
-            itemDiv.innerHTML = `<h4>텍스트 유사성 (${item.similarityScore}%)</h4><p><strong>내 문장 (유사 의심):</strong> "${item.userSentence}"</p><p><strong>원본 의심 문장 (출처: ${item.source}):</strong> "${item.originalSentence}"</p>`;
-            textualSection.appendChild(itemDiv);
-        });
+        plagiarismReport.plagiarismSuspicion
+            .sort((a, b) => b.similarityScore - a.similarityScore)
+            .forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'report-item textual';
+                itemDiv.innerHTML = `<h4>텍스트 유사성 (${item.similarityScore}%)</h4>
+                    <p><strong>내 문장 (유사 의심):</strong> "${item.userSentence}"</p>
+                    <p><strong>원본 의심 문장 (출처: ${item.source}):</strong> "${item.originalSentence}"</p>`;
+                textualSection.appendChild(itemDiv);
+            });
         reportContainer.appendChild(textualSection);
     }
 
@@ -333,28 +351,46 @@ function handleFeedback(isHelpful) {
     // ... (implementation is correct)
 }
 
-function animateValue(obj, start, end, duration) {
+/* ===========================
+   숫자/게이지 애니메이션 (개선)
+   - percent: "00%"
+   - points : "00점"
+   =========================== */
+function animateNumber(obj, start, end, duration, unit = 'percent') {
     let startTimestamp = null;
+    const clamp = (v) => Math.max(0, Math.min(100, v));
+    const target = clamp(end);
+
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        obj.textContent = Math.floor(progress * (end - start) + start) + "%";
+        const value = Math.floor(progress * (target - start) + start);
+
+        // 단위 표기 결정
+        const suffix = unit === 'points' ? "점" : "%";
+        obj.textContent = `${value}${suffix}`;
+
         if (progress < 1) window.requestAnimationFrame(step);
     };
     window.requestAnimationFrame(step);
 }
 
-function animateGauge(arcId, textId, score, isReversed = false) {
+function animateGauge(arcId, textId, score, isReversed = false, unit = 'percent') {
     const gaugeArc = document.getElementById(arcId);
     const gaugeText = document.getElementById(textId);
     if (!gaugeArc || !gaugeText) return;
     
     const circumference = 251.3;
+    const normalized = Math.max(0, Math.min(100, score));
+    const filled = (normalized / 100) * circumference;
+
     const offset = isReversed 
-        ? 251.3 - (score / 100) * circumference
-        : circumference - (score / 100) * circumference;
+        ? (circumference - filled)   // 역방향(높을수록 나쁜 지표: 표절률)
+        : (circumference - filled);  // 순방향(필요 시 확장)
     
     gaugeArc.style.strokeDashoffset = offset;
-    animateValue(gaugeText, 0, score, 1200);
-}
 
+    // 게이지 텍스트는 단위 지정 가능(기본: %)
+    animateNumber(gaugeText, 0, normalized, 1200, unit);
+}
+</script>
