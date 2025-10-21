@@ -44,10 +44,24 @@ const steps = {
 const loadingContainer = document.getElementById('loading-container');
 const loadingText = document.getElementById('loading-text');
 
-// --- Event Listener Setup ---
+// --- Event Listener Setup (FIXED) ---
 function initializeEventListeners() {
     document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
     document.getElementById('btn-retry').addEventListener('click', () => location.reload());
+    
+    // Add event listeners for all buttons, even hidden ones
+    document.getElementById('btn-show-questions').addEventListener('click', () => {
+        if (aiQuestions.length > 0) {
+            revealStage('questions');
+        } else {
+            handleError("질문이 아직 생성되지 않았습니다. 잠시 후 다시 시도해주세요.", true);
+        }
+    });
+    document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
+    document.getElementById('btn-restart').addEventListener('click', () => location.reload());
+    document.getElementById('btn-copy-result').addEventListener('click', handleCopyResult);
+    document.getElementById('btn-feedback-yes').addEventListener('click', () => handleFeedback(true));
+    document.getElementById('btn-feedback-no').addEventListener('click', () => handleFeedback(false));
 }
 
 // --- File Handling ---
@@ -214,31 +228,12 @@ async function handleAnalysisRequest() {
     const data = await callApi({ stage: 'analyze', idea: originalIdea });
     
     if (data) {
+        aiQuestions = data.questions || [];
         renderAnalysisReport(data);
-        revealStage('analysis');
-        handleQuestionGenerationInBackground();
-    }
-}
-
-async function handleQuestionGenerationInBackground() {
-    const btn = document.getElementById('btn-show-questions');
-    if (!btn) return;
-
-    const data = await callApi({ stage: 'generate_questions', idea: originalIdea }, true);
-
-    if (data && data.questions) {
-        aiQuestions = data.questions;
         renderQuestionInputs(aiQuestions);
-        btn.textContent = '질문에 답변하기';
-        btn.disabled = false;
-    } else {
-        btn.textContent = '질문 생성 실패 (클릭하여 재시도)';
-        btn.disabled = false;
-        // Add a click listener to retry generation
-        btn.onclick = handleQuestionGenerationInBackground;
+        revealStage('analysis');
     }
 }
-
 
 async function handleFusionRequest() {
     const userAnswers = aiQuestions.map((_, i) => document.getElementById(`answer-${i}`).value.trim());
@@ -257,21 +252,27 @@ async function handleFusionRequest() {
 
 // --- Rendering Functions ---
 function renderAnalysisReport(data) {
-    const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport, logicalOriginalityScore } = data;
+    const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport } = data;
     
     document.getElementById('analysis-doc-type').textContent = `(분석 유형: ${documentType || '알 수 없음'})`;
-    document.getElementById('core-summary-list').innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
-    document.getElementById('logic-flowchart').innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
+    
+    const coreSummaryList = document.getElementById('core-summary-list');
+    coreSummaryList.innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
+    
+    const flowchartContainer = document.getElementById('logic-flowchart');
+    if(flowchartContainer){
+        flowchartContainer.innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
+    }
 
     const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport?.plagiarismSuspicion);
-    const calculatedLogicalScore = logicalOriginalityScore !== undefined ? logicalOriginalityScore : 100 - Math.round((structuralComparison?.topicalSimilarity * 0.4 || 0) + (structuralComparison?.structuralSimilarity * 0.6 || 0));
+    const logicalOriginalityScore = 100 - Math.round((structuralComparison?.topicalSimilarity * 0.4 || 0) + (structuralComparison?.structuralSimilarity * 0.6 || 0));
 
     const reasoningEl = document.getElementById('originality-reasoning-text');
     if (reasoningEl) {
         reasoningEl.textContent = structuralComparison?.originalityReasoning || "분석 코멘트가 없습니다.";
     }
 
-    animateGauge('logical-gauge-arc', 'logical-gauge-text', calculatedLogicalScore);
+    animateGauge('logical-gauge-arc', 'logical-gauge-text', logicalOriginalityScore);
     animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true);
 
     const reportContainer = document.getElementById('plagiarism-report-container');
@@ -302,12 +303,6 @@ function renderAnalysisReport(data) {
     if (!hasContent) {
         reportContainer.innerHTML = '<p>표절 의심 항목이 발견되지 않았습니다.</p>';
     }
-
-    // Set button to initial "generating" state and attach listener
-    const questionsButton = document.getElementById('btn-show-questions');
-    questionsButton.disabled = true;
-    questionsButton.textContent = '질문 생성 중...';
-    questionsButton.onclick = () => revealStage('questions'); // Attach click listener here
 }
 
 function calculateTextPlagiarismScore(plagiarismSuspicion) {
