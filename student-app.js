@@ -48,12 +48,6 @@ const loadingText = document.getElementById('loading-text');
 function initializeEventListeners() {
     document.getElementById('btn-start-analysis').addEventListener('click', handleAnalysisRequest);
     document.getElementById('btn-retry').addEventListener('click', () => location.reload());
-    document.getElementById('btn-show-questions').addEventListener('click', () => revealStage('questions'));
-    document.getElementById('btn-submit-answers').addEventListener('click', handleFusionRequest);
-    document.getElementById('btn-restart').addEventListener('click', () => location.reload());
-    document.getElementById('btn-copy-result').addEventListener('click', handleCopyResult);
-    document.getElementById('btn-feedback-yes').addEventListener('click', () => handleFeedback(true));
-    document.getElementById('btn-feedback-no').addEventListener('click', () => handleFeedback(false));
 }
 
 // --- File Handling ---
@@ -163,17 +157,18 @@ function handleError(message, showRetry = true) {
 }
 
 // --- API Call Function ---
-async function callApi(body) {
-    loadingContainer.classList.remove('hidden');
-    loadingContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    const messages = ["AI가 문서를 분류 중입니다...", "논리 구조를 분석하고 있습니다...", "표절 검사를 수행 중입니다...", "리포트를 생성 중입니다..."];
-    let messageIndex = 0;
-    loadingText.textContent = messages[messageIndex];
-    loadingInterval = setInterval(() => {
-        messageIndex = (messageIndex + 1) % messages.length;
+async function callApi(body, isBackgroundTask = false) {
+    if (!isBackgroundTask) {
+        loadingContainer.classList.remove('hidden');
+        loadingContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const messages = ["AI가 문서를 분류 중입니다...", "논리 구조를 분석하고 있습니다...", "표절 검사를 수행 중입니다...", "리포트를 생성 중입니다..."];
+        let messageIndex = 0;
         loadingText.textContent = messages[messageIndex];
-    }, 3000);
+        loadingInterval = setInterval(() => {
+            messageIndex = (messageIndex + 1) % messages.length;
+            loadingText.textContent = messages[messageIndex];
+        }, 3000);
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 50000); 
@@ -191,15 +186,21 @@ async function callApi(body) {
         }
         return await response.json();
     } catch (error) {
-        if (error.name === 'AbortError') {
-            handleError('AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요.');
+        if (!isBackgroundTask) {
+            if (error.name === 'AbortError') {
+                handleError('AI 응답 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요.');
+            } else {
+                handleError(`분석 중 오류가 발생했습니다: ${error.message}`);
+            }
         } else {
-            handleError(`분석 중 오류가 발생했습니다: ${error.message}`);
+             console.error("Background task failed:", error);
         }
         return null;
     } finally {
-        loadingContainer.classList.add('hidden');
-        clearInterval(loadingInterval);
+        if (!isBackgroundTask) {
+            loadingContainer.classList.add('hidden');
+            clearInterval(loadingInterval);
+        }
     }
 }
 
@@ -209,15 +210,34 @@ async function handleAnalysisRequest() {
     if (!originalIdea) return alert('아이디어를 입력해주세요.');
     
     finalizeStage('input');
+    
     const data = await callApi({ stage: 'analyze', idea: originalIdea });
     
     if (data) {
-        aiQuestions = data.questions || [];
         renderAnalysisReport(data);
-        renderQuestionInputs(aiQuestions);
         revealStage('analysis');
+        handleQuestionGenerationInBackground();
     }
 }
+
+async function handleQuestionGenerationInBackground() {
+    const btn = document.getElementById('btn-show-questions');
+    if (!btn) return;
+
+    const data = await callApi({ stage: 'generate_questions', idea: originalIdea }, true);
+
+    if (data && data.questions) {
+        aiQuestions = data.questions;
+        renderQuestionInputs(aiQuestions);
+        btn.textContent = '질문에 답변하기';
+        btn.disabled = false;
+    } else {
+        btn.textContent = '질문 생성 실패 (클릭하여 재시도)';
+        btn.disabled = false;
+        btn.onclick = handleQuestionGenerationInBackground;
+    }
+}
+
 
 async function handleFusionRequest() {
     const userAnswers = aiQuestions.map((_, i) => document.getElementById(`answer-${i}`).value.trim());
@@ -234,7 +254,7 @@ async function handleFusionRequest() {
     }
 }
 
-// --- Rendering Functions ---
+// --- Rendering Functions (FIXED) ---
 function renderAnalysisReport(data) {
     const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport } = data;
     
@@ -281,6 +301,11 @@ function renderAnalysisReport(data) {
     if (!hasContent) {
         reportContainer.innerHTML = '<p>표절 의심 항목이 발견되지 않았습니다.</p>';
     }
+
+    // Set button to initial "generating" state
+    const questionsButton = document.getElementById('btn-show-questions');
+    questionsButton.disabled = true;
+    questionsButton.textContent = '질문 생성 중...';
 }
 
 function calculateTextPlagiarismScore(plagiarismSuspicion) {
