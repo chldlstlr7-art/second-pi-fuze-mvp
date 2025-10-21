@@ -3,7 +3,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { searchRelevantContext } = require('./rag-service.js');
 
 // --- 코드 내 RAG 스위치 ---
-const ENABLE_RAG_IN_CODE = true; 
+const ENABLE_RAG_IN_CODE = false; 
 const isRagEnabled = process.env.ENABLE_RAG === 'true' && ENABLE_RAG_IN_CODE;
 
 // 2. Gemini API 설정 (병렬 처리용)
