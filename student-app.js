@@ -250,29 +250,22 @@ async function handleFusionRequest() {
     }
 }
 
-// --- Rendering Functions ---
 function renderAnalysisReport(data) {
     const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport } = data;
     
     document.getElementById('analysis-doc-type').textContent = `(분석 유형: ${documentType || '알 수 없음'})`;
-    
-    const coreSummaryList = document.getElementById('core-summary-list');
-    coreSummaryList.innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
-    
-    const flowchartContainer = document.getElementById('logic-flowchart');
-    if(flowchartContainer){
-        flowchartContainer.innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
-    }
+    document.getElementById('core-summary-list').innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
+    document.getElementById('logic-flowchart').innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
 
     const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport?.plagiarismSuspicion);
-    const logicalOriginalityScore = 100 - Math.round((structuralComparison?.topicalSimilarity * 0.4 || 0) + (structuralComparison?.structuralSimilarity * 0.6 || 0));
+    const structuralPlagiarismRate = Math.round((structuralComparison?.topicalSimilarity * 0.4 || 0) + (structuralComparison?.structuralSimilarity * 0.6 || 0));
 
     const reasoningEl = document.getElementById('originality-reasoning-text');
     if (reasoningEl) {
         reasoningEl.textContent = structuralComparison?.originalityReasoning || "분석 코멘트가 없습니다.";
     }
 
-    animateGauge('logical-gauge-arc', 'logical-gauge-text', logicalOriginalityScore);
+    animateGauge('logical-gauge-arc', 'logical-gauge-text', structuralPlagiarismRate, true);
     animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true);
 
     const reportContainer = document.getElementById('plagiarism-report-container');
