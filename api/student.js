@@ -50,7 +50,7 @@ Output JSON in Korean.
 const promptForTextualAnalysis = `
 You are a plagiarism detection specialist. Your ONLY task is to analyze the user's text for direct textual similarities.
 Be extremely fast and concise. Output JSON in Korean.
-**Rules:** Report ALL instances with similarityScore >= 90%, including 'userSentence' and 'originalSentence'. For the 'source', if unknown, state '일반적인 표현'. Do NOT invent sources. Respond with a VALID JSON object without markdown.
+**Rules:** Report ALL instances with similarityScore >= 90%, including 'userSentence' and 'originalSentence'. Do NOT invent sources. Respond with a VALID JSON object without markdown.
 **JSON STRUCTURE:**
 { "plagiarismSuspicion": [{ "userSentence": "<...>", "originalSentence": "<...>", "source": "<...>", "similarityScore": <Number> }] }
 `;
