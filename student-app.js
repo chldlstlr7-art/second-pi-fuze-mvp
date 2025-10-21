@@ -234,6 +234,7 @@ async function handleQuestionGenerationInBackground() {
     } else {
         btn.textContent = '질문 생성 실패 (클릭하여 재시도)';
         btn.disabled = false;
+        // Add a click listener to retry generation
         btn.onclick = handleQuestionGenerationInBackground;
     }
 }
@@ -254,23 +255,23 @@ async function handleFusionRequest() {
     }
 }
 
-// --- Rendering Functions (FIXED) ---
+// --- Rendering Functions ---
 function renderAnalysisReport(data) {
-    const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport } = data;
+    const { documentType, coreSummary, logicFlowchart, structuralComparison, plagiarismReport, logicalOriginalityScore } = data;
     
     document.getElementById('analysis-doc-type').textContent = `(분석 유형: ${documentType || '알 수 없음'})`;
     document.getElementById('core-summary-list').innerHTML = (coreSummary || []).map(item => `<li>${item}</li>`).join('');
     document.getElementById('logic-flowchart').innerHTML = (logicFlowchart || "").split('->').map(item => `<div class="flowchart-item">${item.trim()}</div>`).join('');
 
     const textPlagiarismScore = calculateTextPlagiarismScore(plagiarismReport?.plagiarismSuspicion);
-    const logicalOriginalityScore = 100 - Math.round((structuralComparison?.topicalSimilarity * 0.4 || 0) + (structuralComparison?.structuralSimilarity * 0.6 || 0));
+    const calculatedLogicalScore = logicalOriginalityScore !== undefined ? logicalOriginalityScore : 100 - Math.round((structuralComparison?.topicalSimilarity * 0.4 || 0) + (structuralComparison?.structuralSimilarity * 0.6 || 0));
 
     const reasoningEl = document.getElementById('originality-reasoning-text');
     if (reasoningEl) {
         reasoningEl.textContent = structuralComparison?.originalityReasoning || "분석 코멘트가 없습니다.";
     }
 
-    animateGauge('logical-gauge-arc', 'logical-gauge-text', logicalOriginalityScore);
+    animateGauge('logical-gauge-arc', 'logical-gauge-text', calculatedLogicalScore);
     animateGauge('text-gauge-arc', 'text-gauge-text', textPlagiarismScore, true);
 
     const reportContainer = document.getElementById('plagiarism-report-container');
@@ -302,10 +303,11 @@ function renderAnalysisReport(data) {
         reportContainer.innerHTML = '<p>표절 의심 항목이 발견되지 않았습니다.</p>';
     }
 
-    // Set button to initial "generating" state
+    // Set button to initial "generating" state and attach listener
     const questionsButton = document.getElementById('btn-show-questions');
     questionsButton.disabled = true;
     questionsButton.textContent = '질문 생성 중...';
+    questionsButton.onclick = () => revealStage('questions'); // Attach click listener here
 }
 
 function calculateTextPlagiarismScore(plagiarismSuspicion) {
